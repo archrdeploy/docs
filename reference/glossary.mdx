@@ -1,0 +1,185 @@
+---
+title: Glossary
+description: Plain-language definitions for Archr: the terms you'll meet while launching, trading, or holding ARCHR.
+audience: trader
+---
+
+Plain-language definitions for the terms you will meet while launching, trading, or holding ARCHR on Archr. For contract-level detail, see [Contracts](/network/contracts).
+
+## A
+
+### Airdrop
+
+A batched on-chain distribution of a coin to a snapshot of wallets, always denominated in the coin itself. The term covers three things on Archr: the source-holder pots of [airdrop](/launch/airdrop-mode) and [migration](/launch/migrations) launches, the [holder rewards](/earn/holder-rewards) tranches paid to ARCHR holders from each new coin's escrow, and, for coins launched before the current program, the legacy [fee-flywheel](/earn/archr-flywheel) payouts.
+
+### `AlreadyLaunched`
+
+The on-chain revert raised by every launcher factory when a launch is retried against a dedupe key that has already produced a coin. The launch's own trigger surface (site / Reddit / X) enforces dedupe off-chain first; the on-chain revert is the crash-safety backstop. See [launch overview → dedupe](/launch/overview#dedupe).
+
+### ARCHR
+
+The [Archr platform token](/network/contracts#archr-token). Holding ARCHR earns [holder rewards](/earn/holder-rewards) from every new coin's escrow and, from coins launched before the current program, the legacy [fee-flywheel](/earn/archr-flywheel) airdrops.
+
+### Archr
+
+The launchpad platform itself: the on-chain launcher contracts, the archr.win frontend, the Reddit and X trigger bots, and the [holder rewards](/earn/holder-rewards) and legacy [fee-flywheel](/earn/archr-flywheel) programs. See [Introduction](/introduction).
+
+## B
+
+### Burned LP
+
+The launch-wall LP position on new coins, minted directly to the burn address `0x000000000000000000000000000000000000dEaD`. It is owned by no address, so nobody (the platform included) can withdraw or move it, and one Blockscout click confirms the owner is the dead address. Coins launched before the current program instead hold an equivalent permanently locked LP NFT in the launcher factory. See [risks → liquidity is burned, rewards are ETH](/reference/risks#liquidity-is-burned-rewards-are-eth).
+
+## C
+
+### Coin
+
+A token launched through Archr. See [Contracts → Coin](/network/contracts#coin) and [FAQ → what does a coin look like on-chain](/reference/faq#what-does-a-coin-look-like-on-chain).
+
+### `collect(id, to)`
+
+The owner-only call on the earlier launcher factories that sweeps a locked position's accrued swap fees to a destination address. Because the position is locked forever, `collect` cannot decrease liquidity; it can only realize the `tokensOwed` fee bucket. Feeds the legacy [fee-flywheel](/earn/archr-flywheel) for coins launched before the current program; current coins route fees to their creator through `collectCreatorFees(token)` instead (see [creator fees](/launch/creator-fees)).
+
+### Creator
+
+The wallet recorded at launch as the recipient of a coin's [creator fees](/launch/creator-fees). Site and user-linked launches record the launching wallet automatically; Reddit and X launches start with no creator, and the person who posted the launch claims it by replying `!claim 0x<address>` from the same account in the same thread. Setting a creator is one-shot (a set creator can never be changed) and publicly evented. Until claimed, the skimmed ETH accrues in the coin's vault and never expires.
+
+### Creator fees
+
+A coin's creator earns 1% of its trading volume, paid as pure ETH. A [hook](/reference/glossary#hook) on the coin's V4 pool skims 1% of the ETH side of every trade into a per-coin vault; anyone can call `collectCreatorFees(token)`, and the contract forwards the whole vault balance to the recorded [creator](/reference/glossary#creator) as ETH. Enforced on-chain: there is no platform cut and no function that routes it anywhere else. Applies to coins launched under the current program; earlier coins stay on the legacy [fee-flywheel](/earn/archr-flywheel). See [creator fees](/launch/creator-fees).
+
+## D
+
+### Dedupe
+
+The rule that each trigger event can produce at most one coin: one per launch form submission, one per Reddit comment, one per tweet. Enforced off-chain by the platform and on-chain by the launcher factories. See [launch overview → dedupe](/launch/overview#dedupe).
+
+### Dev-buy
+
+The site's optional launch feature: buy a share of your coin's supply in the same transaction that deploys it. The deploy and the buy succeed together or neither happens; a swap-side revert unwinds the whole transaction and no coin is deployed. Only available on the site trigger. See [dev-buy](/launch/dev-buy).
+
+### Distributor
+
+The address the legacy [fee-flywheel program](/earn/archr-flywheel) uses as its working balance, serving coins launched before the current program. Collected fees land here, WETH is swapped into coin here, and the top-50 airdrop is sent from here. See [Contracts → distributor](/network/contracts#archr-fee-flywheel-distributor).
+
+## E
+
+### Early-adopter bonus
+
+The 15.2M-token slice of a new coin's escrow, unlocked 168 hours after launch and paid to the coin's own early buyers rather than to ARCHR holders. Qualification is a published rule, computed off-chain by the platform: tokens received directly from the coin's pool within 24 hours of launch, worth at least $10 at buy time, with no outbound transfer of the coin before 168 hours (sending to another wallet, adding LP, and bridging all count as outbound and disqualify the wallet entirely). Dev-buys qualify. See [holder rewards](/earn/holder-rewards).
+
+### Escrow (tranche escrow)
+
+The on-chain contract that receives 5% of a new coin's supply in the launch transaction (2% on a [migration](/launch/migrations)) and releases it in [tranches](/reference/glossary#tranche) on a fixed schedule. Early or oversized release reverts, and no function exists to withdraw escrowed funds during the program. After 30 days from launch, the contract owner can sweep only that coin's unspent leftovers (failed sends, dust, pots with no eligible recipients); the 30-day gate is enforced on-chain. See [holder rewards](/earn/holder-rewards).
+
+### ETH skim
+
+The 1% cut of the ETH side of every trade, taken by the pool's [hook](/reference/glossary#hook) on new coins and paid to the coin's [creator](/launch/creator-fees) as ETH. The pool's own LP fee is 0, so the skim is the only cut on a trade. See [trading overview → the 1% ETH skim](/trade/overview#the-1-eth-skim).
+
+## F
+
+### Fee tier
+
+New coins trade on a Uniswap V4 pool with an **LP fee of 0**; their only per-trade cut is the 1% [ETH skim](/reference/glossary#eth-skim). Coins launched before the current program trade on a Uniswap V3 pool at the **1% fee tier** (`fee = 10000`, `tickSpacing = 200`), whose fee feeds the legacy [fee-flywheel](/earn/archr-flywheel). See [trading overview](/trade/overview).
+
+### Fully-diluted valuation (FDV)
+
+The market cap the coin would have if every token were priced at the current pool price. Because Archr coins have a fixed 1B supply, initial FDV equals the market cap implied by the launch tick. The launch FDV target varies by launch type; see [launch overview](/launch/overview).
+
+## H
+
+### Hook
+
+The Uniswap V4 contract attached to every new coin's pool that runs custom logic on each trade. On Archr the hook skims 1% of the ETH side of every trade (both buys and sells) into the coin's per-coin vault, which is later paid to the [creator](/launch/creator-fees) as ETH. It is a single ownerless, parameterless, pauseless contract shared by every new pool. See [Contracts → ArchrHookV3](/network/contracts#archrhookv3).
+
+### Holder rewards
+
+The program that pays ARCHR holders from every new coin's escrow: 11.6M tokens at 24 hours, 11.6M at 72 hours, and 11.6M at 168 hours after launch, pro-rata by counted ARCHR weight, with a $10 minimum and no top-N cutoff. Amounts and unlock times are fixed at launch and enforced on-chain; recipient lists are computed off-chain by the platform from published snapshot blocks. Replaces the legacy [fee-flywheel](/earn/archr-flywheel) for coins launched under the current program. See [holder rewards](/earn/holder-rewards).
+
+## L
+
+### Launcher factory
+
+The on-chain contract that actually deploys a coin, creates its pool, and disposes of the launch-wall LP. Current launches from every surface go through the factory listed on [Contracts](/network/contracts), which mints the launch-wall LP directly to the burn address. The earlier factories ([`ArchrFactoryV2`](/network/contracts#archrfactoryv2), [`WebFactory`](/network/contracts#webfactory) with its [`ArchrLaunchpad`](/network/contracts#archrlaunchpad) adapter, [`RedditFactory`](/network/contracts#redditfactory), and [`TwitterFactory`](/network/contracts#twitterfactory)) stay deployed and keep serving the coins they launched, holding those coins' LP permanently locked.
+
+### Launch tick
+
+The tick where the single-sided sell wall starts: the lowest price at which a coin can be bought. Derived from a target FDV in USD, read live from Chainlink ETH/USD on 4663, then snapped to a multiple of `tickSpacing = 200`. Because the coin sorts above native ETH in the pool (ETH is `currency0`, the coin is `currency1`), the launch tick is positive. See [launch overview → launch tick](/launch/overview#the-launch-tick).
+
+### `Launched`
+
+The event every launcher factory emits after a successful launch. Carries the deployed coin address, pool address, LP NFT id, name, symbol, and dedupe key. Indexers key off this event. See [Contracts](/network/contracts).
+
+## M
+
+### Migration
+
+A self-serve launch that moves a coin's community from another platform onto Archr: one transaction deploys a fresh coin, escrows 2% for ARCHR holders, records whoever launches it as [creator](/reference/glossary#creator), and disables the coin's ticker; up to 70% of supply is then airdropped pro-rata to the source coin's holders. The pot is sized on-chain from the source supply held outside its own LP, measured at the block the migration lands. One migration per source coin, ever, enforced on-chain; only coins from outside Archr can migrate. See [migrations](/launch/migrations).
+
+## N
+
+### NPM
+
+Uniswap V3's `NonfungiblePositionManager`, the contract that mints LP positions as ERC-721 NFTs. On 4663 the canonical NPM is `0x73991a25C818Bf1f1128dEAaB1492D45638DE0D3`. Coins launched before the current program hold their locked LP NFTs via NPM; new coins use the [Uniswap V4 PositionManager](/network/contracts#uniswap-v4-positionmanager) instead. See [Contracts → Uniswap V3 NPM](/network/contracts#uniswap-v3-nonfungiblepositionmanager).
+
+## O
+
+### OG ticker
+
+A ticker permanently reserved for a coin that has proven itself. When a coin's trailing 48-hour median FDV holds at or above $200k (measured off-chain by the platform from on-chain prices), the platform stages an on-chain disable of its ticker; 14 days later, anyone can activate it, and the contract enforces the window (the program cannot skip it), subject to the contract owner's publicly evented veto and emergency override. Coins launched before the current program are OG-eligible too. See [tickers](/launch/tickers).
+
+## P
+
+### Permit2
+
+The canonical Uniswap approval contract. On a Uniswap V4 pool the router pulls the coin from your wallet through Permit2 rather than a direct ERC-20 transfer, so **selling** a new coin needs a one-time Permit2 approval before the first swap. Buying needs no approval, because a buy spends native ETH. The swap widget prompts for the approval when needed. On 4663 Permit2 is at `0x000000000022D473030F116dDEE9F6B43aC78BA3`. See [trading overview → selling](/trade/overview#selling-permit2-approval).
+
+## R
+
+### Robinhood Chain
+
+The L2 rollup Archr runs on. Chain ID **4663** (mainnet). Native token ETH. Arbitrum Orbit stack settling to Ethereum mainnet. Canonical docs: [docs.robinhood.com/chain](https://docs.robinhood.com/chain). See [wallet setup](/getting-started/wallet-setup) to add it to a wallet.
+
+## S
+
+### Sell wall
+
+The single-sided liquidity position that every Archr launch creates: the coin's LP share (95% of supply on a plain launch, smaller on [airdrop](/launch/airdrop-mode) and [migration](/launch/migrations) launches), positioned from the launch tick upward, with no ETH on the buy side at deploy. Buyers eat into the wall to discover price. See [trading overview](/trade/overview#how-price-discovers).
+
+### Slippage
+
+The maximum acceptable gap between the price you expected when you signed a swap and the price you actually got. The swap widget lets you set a tolerance in basis points; a fill outside tolerance reverts the swap rather than filling at a worse price. See [trading overview → slippage](/trade/overview#slippage).
+
+### `SwapRouter02`
+
+Uniswap V3's canonical periphery router. On 4663 it lives at `0xCaf681a66D020601342297493863E78C959E5cb2`. Coins launched before the current program are traded through it; new coins route through the [Universal Router](/reference/glossary#universal-router) instead. See [Contracts → Uniswap V3 SwapRouter02](/network/contracts#uniswap-v3-swaprouter02).
+
+## T
+
+### Tick
+
+The unit of price granularity in a Uniswap pool. Each tick is a fixed proportional step; the pool's price at a given tick is `1.0001^tick`. Archr pools use `tickSpacing = 200`, so valid ticks are multiples of 200. See the [Uniswap tick docs](https://docs.uniswap.org/contracts/v3/reference/core/libraries/TickMath) for the math.
+
+### Ticker registry
+
+The factory's on-chain list of disabled tickers. Matching is case-insensitive for standard letter/digit symbols (2 to 12 characters); launching a disabled ticker reverts. Symbols containing emoji or lookalike characters cannot be protected. `ARCHR` is disabled from day one. See [tickers](/launch/tickers).
+
+### Tranche
+
+One time-locked slice of a coin's escrow. A standard launch carries four: 11.6M tokens to ARCHR holders at 24, 72, and 168 hours after launch, plus the 15.2M [early-adopter bonus](/reference/glossary#early-adopter-bonus) at 168 hours. A [migration](/launch/migrations) carries three (no bonus). Amounts and unlock times are fixed at launch and enforced on-chain; releasing early or above the cap reverts. See [holder rewards](/earn/holder-rewards).
+
+## U
+
+### Uniswap V4
+
+The AMM every new Archr coin trades on: a singleton `PoolManager` holds all pools, and each pool can attach a [hook](/reference/glossary#hook) that runs on every trade. Archr pools pair a coin against native ETH at LP fee 0, with the hook taking the 1% [ETH skim](/reference/glossary#eth-skim). Coins launched before the current program trade on Uniswap V3 instead. See [Contracts → Uniswap V4 PoolManager](/network/contracts#uniswap-v4-poolmanager).
+
+### Universal Router
+
+Uniswap's periphery router for V4 swaps. On 4663 it lives at `0x53BF6B0684Ec7eF91e1387Da3D1a1769bC5A6F77`. The site's swap widget and every new-coin dev-buy route through it. See [Contracts → Uniswap V4 Universal Router](/network/contracts#uniswap-v4-universal-router).
+
+## W
+
+### WETH
+
+Wrapped ETH on 4663, at `0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73`. Coins launched before the current program pair against WETH; new coins pair against native ETH, so no wrap step is involved.

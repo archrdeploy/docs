@@ -1,0 +1,70 @@
+---
+title: Airdrop Mode
+description: Reserve 30% or 60% of a new coin's supply for holders of an existing Robinhood Chain coin, distributed automatically after launch.
+audience: launcher
+---
+
+Airdrop Mode is an optional setting on the [site launch form](/getting-started/first-launch-site). When you turn it on, part of your new coin's supply is set aside for the holders of another Robinhood Chain coin you choose (the **source coin**), and distributed to them pro-rata after your coin goes live. The rest of the supply funds the [sell wall](/launch/overview#what-a-launch-produces) like a normal launch, after the [5% holder-rewards escrow](/earn/holder-rewards) that every launch pays.
+
+It is a way to launch into an existing community: pick a coin whose holders you want to reach, and every eligible holder of that coin receives a share of yours.
+
+## What you choose
+
+On the launch form, toggle **Airdrop Mode** and pick one of two reserved shares:
+
+| Reserve | Source holders    | Holder-rewards escrow | Sell wall (LP burned)   | Launch FDV target |
+| ------- | ----------------- | --------------------- | ----------------------- | ----------------- |
+| **30%** | 300,000,000 coins | 50,000,000 coins (5%) | 650,000,000 coins (65%) | $5,567            |
+| **60%** | 600,000,000 coins | 50,000,000 coins (5%) | 350,000,000 coins (35%) | $19,200           |
+
+Then paste the address of the source coin. A live preview shows the source coin's symbol and how many holders are eligible, so you know the reach before you launch.
+
+The reserved share is enforced on-chain: it is always exactly 30% or 60% of the fixed 1,000,000,000 supply, so the split cannot be tampered with after the fact. The 5% escrow is not part of the reserve; it comes out of every launch, airdrop or plain, and unlocks on the [holder-rewards schedule](/earn/holder-rewards), enforced by the escrow contract.
+
+## Who is eligible
+
+Eligibility is a snapshot taken at the block your coin launches. A wallet qualifies if it holds at least **$10 worth** of the source coin at that block, priced from the source coin's Uniswap pool and the live [Chainlink ETH/USD feed](https://docs.robinhood.com/chain/oracles-and-price-feeds).
+
+A few addresses are always excluded so the airdrop reaches real holders:
+
+- The zero address and the standard burn address.
+- The source coin's own contract.
+- The source coin's liquidity pools and the contracts that hold that liquidity.
+
+Every remaining holder above the $10 floor receives a share proportional to how much of the source coin they hold. Holding twice as much of the source means receiving twice the share.
+
+## How it is distributed
+
+The launch transaction sends the reserved share into the [`AirdropDistributor`](/network/contracts#airdropdistributor) contract in the same transaction that creates your coin and its pool. Distribution to eligible holders happens automatically over the following minutes, in batches, until every eligible wallet has been paid. The eligible-holder list is computed off-chain by the platform from the snapshot block; the payments themselves are ordinary on-chain transfers from the distributor, visible on Blockscout.
+
+You can follow the progress on your coin's page, which shows the source coin, the snapshot block, and how many holders have been paid so far.
+
+## What buyers see
+
+The portion of supply that is not reserved or escrowed funds a single-sided sell wall in the V4 pool, the same shape as a [normal launch](/launch/overview#what-a-launch-produces) with the launch-wall LP burned to the dead address: 650,000,000 coins on the 30% tier, 350,000,000 on the 60% tier. The launch FDV target rises as the wall shrinks ($5,567 and $19,200, against $1,662 for a plain launch) so the pool holds the same liquidity depth at every tier. The higher starting price reflects the supply that has been held back for the airdrop, so early buyers are not paying into a thinner pool.
+
+## Choosing a source coin
+
+The preview will only let you launch against a source coin that can be priced and snapshotted:
+
+- It must be a standard ERC-20 on Robinhood Chain.
+- It must have a Uniswap pool with enough liquidity to price it.
+- It must have at least one holder above the $10 floor.
+- It must be worth at least **$50,000 FDV**.
+
+If the preview shows an error (no pool, pool too shallow, no eligible holders, or under the floor), pick a different source coin. Coins with non-standard transfer behavior (fee-on-transfer or rebasing) are not supported as sources.
+
+## The $50k source floor
+
+The floor is checked twice, and the two checks make different guarantees:
+
+- **On-chain**: the contract reads the source coin's spot price in the launch transaction and reverts below $50,000 FDV. This is enforced by the contract, but it is a spot-price check: a determined attacker can pump a thin pool past the floor for one block. It is a deterrent; it is not manipulation-proof.
+- **On the site**: the form requires the source coin's trailing 48-hour median FDV to be at or above $50,000. The median is computed off-chain by the platform from on-chain prices; it is the actual quality gate, because a 48-hour median is much more expensive to fake than one block's spot price.
+
+## Availability
+
+Airdrop Mode is available on the [site launch path](/getting-started/first-launch-site) only. Reddit and X `!deploy` launches produce a standard coin without a reserved airdrop.
+
+## Cost
+
+Airdrop Mode costs slightly more gas at launch than a plain launch, because the launch transaction also moves the reserved share into the distributor. The distribution afterward is handled for you. There is no additional platform fee. See [launch overview → cost](/launch/overview#cost-to-launch) for the baseline.

@@ -1,0 +1,42 @@
+---
+title: Token list
+description: A Uniswap-format token list JSON covering every Archr-launched coin, hosted at a stable URL.
+audience: developer
+---
+
+Archr publishes a [Uniswap-format token list](https://tokenlists.org/) covering every coin ever launched on the network. Point any list-consuming wallet, DEX frontend, or aggregator at the URL and it will pick up the full catalog; no per-token registry submissions required.
+
+## URL
+
+```
+https://archr.win/tokenlist.json
+```
+
+The route returns `application/json` and is cached for 5 minutes. Fresh launches appear on the next cache miss.
+
+## What it includes
+
+Every coin ever launched through one of the [Archr launcher factories](/network/contracts): the current [`ArchrFactoryV3`](/network/contracts#archrfactoryv3) (reached from the site through [`ArchrLaunchpadV3`](/network/contracts#archrlaunchpadv3)), plus coins launched before the current program through [`ArchrFactoryV2`](/network/contracts#archrfactoryv2), [`ArchrFactory`](/network/contracts#archrfactory), [`WebFactory`](/network/contracts#webfactory), [`RedditFactory`](/network/contracts#redditfactory), and [`TwitterFactory`](/network/contracts#twitterfactory). Each entry carries the standard Uniswap token-list fields:
+
+- `chainId`: `4663` (Robinhood Chain mainnet).
+- `address`: the coin's ERC-20 contract address (EIP-55 checksummed).
+- `name`, `symbol`, `decimals` (`18`).
+- Optional `logoURI` for coins whose launcher supplied one via the site's socials panel.
+
+Tokens are ordered by launch block ascending so the JSON is diff-stable across regenerations; a new launch appends at the tail rather than reshuffling the whole list.
+
+## How to consume it
+
+Any Uniswap-compatible tool that accepts a token list URL will accept the Archr list. In wallets that expose an "Import token list" affordance, paste the URL above. Aggregators typically ingest lists on a fixed cadence; the 5-minute route cache keeps latency low without hammering the underlying RPC.
+
+If you'd rather enumerate coins directly on-chain, every launch emits `Launched(token, pool, lpTokenId, name, symbol, launchId)` from the factory that produced it. Iterating those events from each factory's deploy block onward reconstructs the same set the token list publishes.
+
+## Versioning
+
+The `version` object follows the [Uniswap Token List semver](https://github.com/Uniswap/token-lists#semantic-versioning):
+
+- `minor` bumps by one every time a new coin is added.
+- `patch` bumps when a coin gains a `logoURI` (or any existing-token field changes in the future).
+- `major` is bumped manually on a breaking schema change.
+
+Because Archr launches are strictly append-only on-chain, `minor` is monotone with the total launch count today.

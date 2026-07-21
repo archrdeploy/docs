@@ -1,0 +1,310 @@
+---
+title: Contracts
+description: Archr contract addresses on Robinhood Chain (4663): the current launch stack, earlier launchers, the ARCHR token and escrow, and the canonical Uniswap V4, Uniswap V3, Chainlink, and WETH addresses on 4663.
+audience: developer
+---
+
+## Deployment
+
+Archr runs on Robinhood Chain mainnet (chainId 4663). Every deployed contract below is verified on Blockscout. The owner of each earlier launcher factory is the deploy wallet `0x9008C9eE6eF776c06D4aAFb4a4bfCF13083680c6`.
+
+<Note>
+Explorer links open on [Blockscout for Robinhood Chain](https://robinhoodchain.blockscout.com), the canonical block explorer for 4663.
+</Note>
+
+## Current launch stack
+
+Every new launch, from the site, Reddit, or X, runs through the contracts in this section.
+
+### `ArchrFactoryV3`
+
+The launcher factory behind every new launch. Deploys [`Coin`](#coin) contracts, creates single-sided Uniswap V4 pools paired against native ETH at LP fee 0, and mints every launch-wall LP position directly to the burn address `0x000000000000000000000000000000000000dEaD`, so no address (owner included) can ever move it. On every launch it escrows 5% of the supply into [`TrancheEscrow`](#trancheescrow) in the same transaction and records the coin's creator; both are enforced by the contract. Public function surface:
+
+- `collectCreatorFees(token)`: permissionless. Forwards the entire accrued vault balance to the recorded creator as native ETH. The vault is fed by [`ArchrHookV3`](#archrhookv3), which skims 1% of the ETH side of every trade. Enforced on-chain; no function exists to route it anywhere else. See [creator fees](/launch/creator-fees).
+- `setCreator`: one-shot. Sets the creator for a coin that launched without one (Reddit and X launches, claimed via `!claim`). A set creator can never be changed, and every set is publicly evented.
+- `stageTickerDisable` / `activateTickerDisable`: the [ticker registry](/launch/tickers). A staged disable can be activated by anyone 14 days after staging; the contract enforces the window, so the program cannot skip it, subject to the contract owner's publicly evented veto and emergency override (see [tickers](/launch/tickers)). Launching a disabled ticker reverts `TickerDisabled`.
+- `launchMigration`: the entry point for [migrations](/launch/migrations). Migrations are self-serve and permissionless; one migration per source coin is enforced on-chain.
+
+Airdrop launches through this factory also check the source coin's spot FDV on-chain and revert `SourceBelowFloor` under $50k. The spot check is a deterrent rather than manipulation-proof; the site's 48-hour median check, computed off-chain by the platform, is the quality gate. See [Airdrop Mode](/launch/airdrop-mode).
+
+```
+0x218B50eab2Cc0B8786c414f58F8e33bA9851F1FA
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x218B50eab2Cc0B8786c414f58F8e33bA9851F1FA)
+
+### `ArchrHookV3`
+
+The ownerless singleton Uniswap V4 hook attached to every new coin's pool. On every trade it skims a flat 1% of the ETH side (both buys and sells) into that coin's per-coin vault, which the [factory](#archrfactoryv3) later forwards to the recorded [creator](/launch/creator-fees) as ETH. The hook has no owner, no parameters, and no pause; it holds no ETH at rest.
+
+```
+0x1017120aE98B4a54452EbaAB12F4960d33dF60Cc
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x1017120aE98B4a54452EbaAB12F4960d33dF60Cc)
+
+### `ArchrLaunchpadV3`
+
+The public payable adapter for site launches, fronting [`ArchrFactoryV3`](#archrfactoryv3). The wallet that calls it is recorded as the coin's creator, enforced by the contract.
+
+```
+0xaF0B1b922d183d6D773b519C58d19b19A59C9D2D
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0xaF0B1b922d183d6D773b519C58d19b19A59C9D2D)
+
+### `TrancheEscrow`
+
+Holds every new coin's escrow (5% of supply, 50M tokens; 2% on a [migration](/launch/migrations) launch) in a per-coin pot and pays out the [holder rewards](/earn/holder-rewards) tranches. Tranche amounts and unlock times are fixed at launch and enforced on-chain: an early or oversized release reverts, and the platform cannot withdraw escrowed funds during the program. Public function surface:
+
+- `distributeTranche`: pays an unlocked tranche in batched on-chain transfers to the recipient list, which is computed off-chain by the platform from published snapshot blocks.
+- `sweepExpired`: after a 30-day time gate from launch, enforced by the contract, lets the contract owner sweep only that coin's unspent leftovers (failed sends, dust, pots with no eligible recipients).
+
+```
+0xCF6a256e504a5a62717a2D4379894143B1083450
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0xCF6a256e504a5a62717a2D4379894143B1083450)
+
+## Earlier launchers
+
+New launches use the [current launch stack](#current-launch-stack) above. Every factory below serves coins launched before the current program: each stays deployed to hold those coins' liquidity permanently, and none is used for new launches. Coins launched through them keep their original behavior, including the [legacy fee-flywheel](/earn/archr-flywheel).
+
+### `ArchrFactoryV2`
+
+The V3-pool generation of the launcher factory, used for launches before the move to [`ArchrFactoryV3`](#archrfactoryv3). Deploys [`Coin`](#coin) contracts, creates single-sided Uniswap V3 pools at fee tier 1% (`FEE = 10000`, `TICK_SPACING = 200`), and holds every LP NFT permanently locked. Its coins collect fees through `collectCreatorFees(token)`, paid to the recorded creator with the WETH leg unwrapped to ETH and the coin leg delivered as-is; they carry the 5% [holder-rewards](/earn/holder-rewards) escrow and the ticker registry.
+
+```
+0x4d94bC6894a2D0026E8F819C18e5e6d1286dA5dA
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x4d94bC6894a2D0026E8F819C18e5e6d1286dA5dA)
+
+### `ArchrLaunchpadV2`
+
+The payable adapter site launches used in front of [`ArchrFactoryV2`](#archrfactoryv2), before the move to [`ArchrLaunchpadV3`](#archrlaunchpadv3). The wallet that called it was recorded as the coin's creator, enforced by the contract.
+
+```
+0x7e46B1b46562ED0920aB7015f48120FCefC5616a
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x7e46B1b46562ED0920aB7015f48120FCefC5616a)
+
+### `WebFactory`
+
+The launcher factory the archr.win site used before the move to [`ArchrFactory`](#archrfactory). Deploys [`Coin`](#coin) contracts, creates single-sided V3 pools, and holds every LP NFT permanently locked. Constants: `SUPPLY = 1e27`, `FEE = 10000`, `TICK_SPACING = 200`.
+
+```
+0x1cd6759F20adf6E911d17e45d7046faC7cf6EE72
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x1cd6759F20adf6E911d17e45d7046faC7cf6EE72)
+
+### `ArchrFactory`
+
+The consolidated launcher factory that served launches from the site and the Reddit and X bots before the current program. Deploys [`Coin`](#coin) contracts, creates single-sided V3 pools, and holds every LP NFT permanently locked, with the same `SUPPLY = 1e27`, `FEE = 10000`, `TICK_SPACING = 200` constants as the earlier factories. It adds [Airdrop Mode](/launch/airdrop-mode): a launch can reserve 30% or 60% of the supply (enforced on-chain) and send it to the [`AirdropDistributor`](#airdropdistributor) in the same transaction.
+
+```
+0xcCD6d3e586DE8f5644856303038025a97dCe68c1
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0xcCD6d3e586DE8f5644856303038025a97dCe68c1)
+
+### `AirdropDistributor`
+
+Receives the reserved source-holder share of an [Airdrop Mode](/launch/airdrop-mode) launch and distributes it pro-rata to the source coin's eligible holders. Owned by the deploy wallet. It cannot mint or reprice anything; it only forwards the reserved balances it already holds to the snapshot recipients.
+
+```
+0x7a27d5E568Ed24Eb37DCf8b962d8b01F26b51833
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x7a27d5E568Ed24Eb37DCf8b962d8b01F26b51833)
+
+### `ArchrLaunchpad`
+
+The payable adapter the site trigger used before the current program; site launches now go through [`ArchrLaunchpadV3`](#archrlaunchpadv3). Stateless (no owner, no pause, no storage) and immutable in its wiring to [`ArchrFactory`](#archrfactory). Entry points: `launch(...)` and `launchWithBuy(...)` for plain launches, `launchWithBuyFromPost(...)` for launches keyed to an external post identifier, and `launchWithAirdrop(...)` / `launchWithAirdropAndBuy(...)` for [Airdrop Mode](/launch/airdrop-mode) launches.
+
+```
+0xFAB0B1074af7d4E77C1bc3047A6D267A5623959c
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0xFAB0B1074af7d4E77C1bc3047A6D267A5623959c)
+
+### `RedditFactory`
+
+The launcher factory the Reddit bot (`u/Archer_Bot`) used for its earliest coins. Byte-similar to [`WebFactory`](#webfactory), with the same constants, custody surface, and `Launched` event shape. The `launcher` is set at deploy time by the factory owner and is the only address permitted to call `launch(...)`. Deploys `RedditToken`, a rename of [`Coin`](#coin).
+
+```
+0x8c5DFfA69Eccb132B256eF963Db04A124bEBe0D2
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x8c5DFfA69Eccb132B256eF963Db04A124bEBe0D2)
+
+### `TwitterFactory`
+
+The launcher factory the X (`@archrdeploy`) mention bot used for its earliest coins. Byte-identical to [`RedditFactory`](#redditfactory) with only the contract name changed. Same constants and same locked-LP guarantee.
+
+```
+0x8044644e4458B76ae0331D30D07d468b615A07bD
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x8044644e4458B76ae0331D30D07d468b615A07bD)
+
+### `Coin`
+
+The token template every launcher factory deploys via CREATE2. See [FAQ → what does a coin look like on-chain](/reference/faq#what-does-a-coin-look-like-on-chain) for the properties. The `RedditFactory` and `TwitterFactory` deploy byte-identical renames (`RedditToken`).
+
+Coin addresses are per-launch (deterministic from launcher + salt + name + symbol). See [launch overview](/launch/overview) for how a launch is triggered on-chain.
+
+### `ArchrLauncher`
+
+The one-shot launcher used to deploy the ARCHR platform token itself. Separate from the coin factories above. It launches a single coin, then `launched` flips to `true` and the contract cannot launch again. Locks 70% of ARCHR's supply as LP; the other 30% was minted to the deployer at launch.
+
+```
+0x54DB23FEB1652a1C5294af7859ef09465f83f387
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x54DB23FEB1652a1C5294af7859ef09465f83f387)
+
+## ARCHR
+
+### ARCHR token
+
+The Archr platform token: a plain ERC-20 with fixed supply `1,000,000,000e18`. See [FAQ](/reference/faq#what-does-a-coin-look-like-on-chain) for the properties. Holding ARCHR makes an address eligible for [holder rewards](/earn/holder-rewards) on every new launch and, on coins launched before the current program, the [legacy fee-flywheel](/earn/archr-flywheel).
+
+```
+0xce8F89b7d4AD8936531D764055E6b1a06e30Ab58
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0xce8F89b7d4AD8936531D764055E6b1a06e30Ab58)
+
+### ARCHR WETH V3 pool
+
+The Uniswap V3 pool ARCHR trades on. 1% fee tier, tickSpacing 200. Locked-LP NFT held by [`ArchrLauncher`](#archrlauncher). **This pool address is excluded from [holder rewards](/earn/holder-rewards) snapshots and from the legacy flywheel's top-50 snapshot**: its ARCHR balance is unsold single-sided liquidity, not a real holder.
+
+```
+0x47d4DA247eA887248448aaA8528C556B2399bC31
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x47d4DA247eA887248448aaA8528C556B2399bC31)
+
+### ARCHR fee-flywheel distributor
+
+The address the [legacy fee-flywheel program](/earn/archr-flywheel) uses as its working balance for coins launched before the current program. Collected fees land here, the WETH-leg swap happens from here, and the top-50 airdrop is sent from here. Every airdrop shows up as 50 outgoing transfers of the coin-of-the-cycle.
+
+```
+0x5b82a4D03Fe13C45f9fF9A8d4eB394D35cb18b67
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x5b82a4D03Fe13C45f9fF9A8d4eB394D35cb18b67)
+
+## Robinhood Chain canonical addresses
+
+The following are canonical Robinhood Chain (4663) addresses used by Archr but not deployed by Archr. New coins trade on Uniswap V4; the V3 addresses below serve coins launched before the current program. See [Robinhood Chain protocol contracts](https://docs.robinhood.com/chain/protocol-contracts) for the full list.
+
+### Uniswap V4 PoolManager
+
+The V4 singleton that holds every pool's liquidity and settles every swap. Every new Archr coin's pool lives inside it.
+
+```
+0x8366a39CC670B4001A1121B8F6A443A643e40951
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x8366a39CC670B4001A1121B8F6A443A643e40951)
+
+### Uniswap V4 Universal Router
+
+The V4 periphery router the site's swap widget and every dev-buy call route through for new coins.
+
+```
+0x53BF6B0684Ec7eF91e1387Da3D1a1769bC5A6F77
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x53BF6B0684Ec7eF91e1387Da3D1a1769bC5A6F77)
+
+### Uniswap V4 PositionManager
+
+The V4 periphery contract that mints and manages liquidity positions. Each new coin's launch-wall position is minted through it directly to the burn address.
+
+```
+0x58daec3116aae6D93017bAAea7749052E8a04fA7
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x58daec3116aae6D93017bAAea7749052E8a04fA7)
+
+### Uniswap V4 StateView
+
+The V4 read-only view contract the site uses to read pool state for quotes and live pricing.
+
+```
+0xF3334192D15450CdD385c8B70e03f9A6bD9E673b
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0xF3334192D15450CdD385c8B70e03f9A6bD9E673b)
+
+### Permit2
+
+The canonical Permit2 contract. A sell on a V4 pool pulls the coin through Permit2, so selling a new coin needs a one-time Permit2 approval before the swap. See [trading overview → selling](/trade/overview#selling-permit2-approval).
+
+```
+0x000000000022D473030F116dDEE9F6B43aC78BA3
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x000000000022D473030F116dDEE9F6B43aC78BA3)
+
+### Uniswap V3 Factory
+
+```
+0x1f7d7550B1b028f7571E69A784071F0205FD2EfA
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x1f7d7550B1b028f7571E69A784071F0205FD2EfA)
+
+### Uniswap V3 NonfungiblePositionManager
+
+The V3 periphery contract that mints LP positions as ERC-721 NFTs. Coins launched before the current program hold their locked LP NFTs through this address.
+
+```
+0x73991a25C818Bf1f1128dEAaB1492D45638DE0D3
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x73991a25C818Bf1f1128dEAaB1492D45638DE0D3)
+
+### Uniswap V3 SwapRouter02
+
+The V3 periphery router used to trade coins launched before the current program.
+
+```
+0xCaf681a66D020601342297493863E78C959E5cb2
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0xCaf681a66D020601342297493863E78C959E5cb2)
+
+### WETH9 (4663)
+
+Wrapped ETH on Robinhood Chain. Coins launched before the current program pair against this address; new coins pair against native ETH directly.
+
+```
+0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73)
+
+### Chainlink ETH / USD price feed
+
+The oracle used to price each launch's initial tick from a target FDV in USD. 8 decimals, 24-hour heartbeat.
+
+```
+0x78F3556b67E17Df817D51Ef5a990cDaF09E8d3A9
+```
+
+[View on Blockscout](https://robinhoodchain.blockscout.com/address/0x78F3556b67E17Df817D51Ef5a990cDaF09E8d3A9)
+
+## See also
+
+- [Launch overview](/launch/overview): what a launch does on-chain.
+- [Trading overview](/trade/overview): the pool shape, fees, and where to swap.
+- [Creator fees](/launch/creator-fees): how a coin's creator collects its ETH rewards.
+- [Holder rewards](/earn/holder-rewards): how the escrowed 5% pays ARCHR holders.
+- [ARCHR fee-flywheel](/earn/archr-flywheel): the legacy fee program for coins launched before the current program.
+- [Security](/reference/security): private disclosure process for contract vulnerabilities.

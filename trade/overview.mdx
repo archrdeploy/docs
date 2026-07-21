@@ -1,0 +1,81 @@
+---
+title: Trading overview
+description: Every Archr coin trades on a Uniswap V4 pool paired against native ETH (LP fee 0, single-sided at launch, a 1% ETH-side skim on every trade, no bonding curve, no graduation). How prices discover and where to swap.
+audience: trader
+---
+
+Every coin launched on Archr trades on a [Uniswap V4](https://docs.uniswap.org/contracts/v4/overview) pool paired against native ETH. The pool's own LP fee is **0**, and a hook on the pool takes a flat **1% of the ETH side of every trade** into the coin's creator vault. If you can swap on Uniswap V4, you can swap on Archr.
+
+## The pool
+
+Every Archr pool has the same shape at launch:
+
+| Field         | Value                                                                 |
+| ------------- | --------------------------------------------------------------------- |
+| Pair          | `(native ETH, Coin)`                                                  |
+| LP fee        | **0** (the 1% skim is taken by the hook, not the pool fee)           |
+| Tick spacing  | **200**                                                               |
+| Initial LP    | The coin's LP share (950M on a plain launch, smaller on airdrop tiers), single-sided, above the launch tick |
+| Buy-side ETH  | 0 at launch (buyers bring the ETH)                                    |
+| LP owner      | The burn address `0x000000000000000000000000000000000000dEaD`, so the position can [never be moved by anyone](/reference/faq#is-the-liquidity-really-permanently-locked) |
+
+This is the "single-sided sell wall" model: the pool is created with only the coin side seeded. The first buyer trades ETH into the pool and gets coin back, which pushes the price up through the tick range. Each subsequent buyer pays a higher marginal price than the last.
+
+The wall's size depends on the launch type. A plain launch seeds 950M coins (95% of supply); the remaining 5% is escrowed by the contract in the same transaction for [holder rewards](/earn/holder-rewards). [Airdrop launches](/launch/airdrop-mode) seed smaller walls (650M or 350M) at higher launch FDVs, so pool liquidity depth stays constant across tiers. Coins launched before the current program seeded the full 1B supply. See [launch overview](/launch/overview) for the full split.
+
+## How price discovers
+
+The pool prices as any V4 pool from block one: the initial price is set at the launch tick and moves up as coin flows out. There is no bonding curve, no graduation event, no "phase 1 vs phase 2." Every buy and sell trades against the same burned LP position.
+
+Traders on the sell side (holders who bought earlier, want to exit) fill the "buy side" of the pool as they sell. The pool accumulates ETH from their sales, and later buyers face a mixed ETH+coin book like any V4 pool that has seen two-sided flow.
+
+## The 1% ETH skim
+
+A **1% cut of the ETH side** is taken on every trade by the pool's hook, both buys and sells:
+
+- On a buy, 1% of the ETH going into the pool is skimmed.
+- On a sell, 1% of the ETH coming out is skimmed.
+
+The skim accrues as native ETH in the coin's vault. Where it goes depends on when the coin launched:
+
+- **Current coins**: 100% of the skim is claimable to the coin's recorded creator, paid as pure ETH. Anyone can trigger the collect, and the contract routes the entire amount to the creator; there is no platform cut and no function that routes it anywhere else (enforced on-chain). See [creator fees](/launch/creator-fees).
+- **Coins launched before the current program**: those coins traded on a Uniswap V3 pool with a 1% pool fee, and that fee feeds the [legacy fee-flywheel](/earn/archr-flywheel), which recycles it into airdrops for ARCHR holders.
+
+From the trader's perspective, the 1% is a fixed cost on the ETH leg of each trade. There is no separate protocol fee on top of it.
+
+## Finding coins
+
+The [archr.win](https://archr.win) front page lists every coin launched on the network in a browse grid. Each card shows the coin's name, symbol, live market cap, and launch date, and links through to the coin's full page.
+
+You can sort the grid three ways:
+
+- **Market cap.** Largest coins first. The market cap is live: it is read from each pool's current price, so it tracks where the coin trades right now rather than the valuation it launched at.
+- **Newest.** Most recently launched first.
+- **Oldest.** Earliest launches first.
+
+Open any card to reach that coin's page, where the swap widget and pool details live.
+
+## Where to swap
+
+Every coin's page at [`archr.win/token/<address>`](https://archr.win) has a built-in swap widget wired to the V4 [Universal Router](/network/contracts#uniswap-v4-universal-router) on 4663. It handles the routing and the slippage check for you.
+
+Because the pool is a standard V4 pool, anything on 4663 that speaks V4 also works:
+
+- The canonical [Uniswap V4 Universal Router](/network/contracts#uniswap-v4-universal-router) at `0x53BF6B0684Ec7eF91e1387Da3D1a1769bC5A6F77`.
+- Any aggregator or wallet that supports 4663 and V4 pools.
+
+## Selling: Permit2 approval
+
+A **sell** on a V4 pool needs a standard one-time [Permit2](/network/contracts#permit2) approval before the swap. This is normal for V4: the router pulls the coin from your wallet through Permit2 rather than a direct ERC-20 transfer. The swap widget prompts for the approval the first time you sell a given coin; after that, sells go through in a single step. Buys need no approval, because they spend native ETH.
+
+## Slippage
+
+The swap widget's default slippage tolerance is picked to catch normal volatility on 4663. If your swap reverts with a slippage error, raise the tolerance or wait for the pool to settle. For very large trades, split into smaller pieces to reduce marginal price impact.
+
+## Verifying a coin before you buy
+
+Anyone can launch anything, and there is no global uniqueness check on name or symbol. Before you buy:
+
+1. Verify you have the right **contract address**; do not trust the symbol alone. Coins are found by address, either from the trigger reply (Reddit / X) or the coin's page URL on `archr.win`.
+2. Open the coin on [Blockscout](https://robinhoodchain.blockscout.com) and confirm the fixed supply is `1,000,000,000e18` and that the coin's launch-wall LP position is owned by the burn address `0x…dEaD`. That is the "liquidity is burned" invariant, and it is one explorer click to confirm.
+3. See [risks](/reference/risks) for what a burned LP does **not** protect you against (market risk, price manipulation, coin-specific launcher intent).

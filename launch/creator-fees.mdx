@@ -1,0 +1,50 @@
+---
+title: Creator fees
+description: Every new coin records a creator, and that creator earns 1% of the coin's trading volume, paid as pure ETH. Anyone can trigger the collection; Reddit and X launchers claim with !claim.
+audience: launcher
+---
+
+Every coin launched on Archr records a **creator**, and that creator earns **1% of the coin's trading volume, paid as pure ETH**. A hook on the coin's Uniswap V4 pool skims 1% of the ETH side of every trade, both buys and sells, into a per-coin vault. The skim accrues as native ETH and is claimable at any time. There is no platform cut, and the coin leg is never touched, so the reward is pure ETH with no token selling. This is enforced on-chain.
+
+## How fees accrue
+
+Each trade in the coin's pool pays 1% of its ETH leg into the coin's vault: a buy pays 1% of the ETH going in, a sell pays 1% of the ETH coming out. The pool's own LP fee is **0**, so this 1% is the only cut on a trade. It builds up as ETH in the vault and sits there until someone collects it. The skim never expires, and no address (the platform included) can route it anywhere but the recorded creator.
+
+## Collecting
+
+Collection is permissionless: **anyone** can call `collectCreatorFees(token)` on the [factory](/network/contracts#archrfactoryv3), for any coin. The contract forwards the entire accrued vault balance to the recorded creator as native ETH. No coin leg exists to deliver, and no unwrapping step is needed.
+
+The caller pays gas and receives nothing, so in practice creators collect their own fees, but a creator who has run out of gas money can have anyone trigger the payout for them. The routing to the recorded creator is enforced by the contract.
+
+## Who the creator is
+
+How the creator gets recorded depends on the launch surface:
+
+| Surface | Creator |
+| ------- | ------- |
+| Site launch | The launching wallet, recorded automatically at launch |
+| User-linked launch | The launching wallet, recorded automatically at launch |
+| Reddit `!deploy` | Nobody at launch; claimed afterward with `!claim` |
+| X `!deploy` | Nobody at launch; claimed afterward with `!claim` |
+| [Migration](/launch/migrations) | The launching wallet, recorded automatically at launch |
+
+## Claiming a Reddit or X coin
+
+A coin launched from a Reddit comment or an X post starts with **no creator**. The person who posted the `!deploy` claims it by replying:
+
+```
+!claim 0x<your-address>
+```
+
+in the **same thread** (Reddit) or **same reply chain** (X), **from the same account** that posted the `!deploy`. The platform matches the claim to the original trigger and then sets the creator on-chain.
+
+Two properties of the claim:
+
+- **One-shot.** A set creator can never be changed; the contract enforces this. Double-check the address before you post it.
+- **Publicly evented.** The on-chain creator assignment emits an event, so anyone can verify on Blockscout which address a coin's fees route to.
+
+Matching the `!claim` to the original `!deploy` author is done by the platform, which then submits the on-chain set; the resulting assignment, and everything after it, is on-chain. There is no deadline: until a coin is claimed, its skimmed ETH simply accrues in the vault. It never expires, and no address (the platform included) can take it in the meantime.
+
+## Coins launched before the current program
+
+Legacy coins (launched before the platform upgrade) have no creator record and no claim path. Their locked-LP fees stay in the [legacy fee-flywheel program](/earn/archr-flywheel), which recycles them into airdrops for ARCHR holders. The creator-fee path applies only to coins launched under the current program.

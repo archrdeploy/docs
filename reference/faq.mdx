@@ -1,0 +1,101 @@
+---
+title: FAQ
+description: Common questions about Archr: what it is, how to launch, how trading works, how holder rewards and creator fees pay, and where to report bugs.
+audience: trader
+---
+
+### What is Archr?
+
+Archr is a self-serve token launchpad on [Robinhood Chain](https://docs.robinhood.com/chain) (chainId 4663). Every launch deploys a plain fixed-supply ERC-20 and creates a Uniswap V4 pool for it paired against native ETH, with **95% of the supply added as a single-sided sell wall whose LP position is burned to the dead address** (the other 5% is escrowed on-chain for [holder rewards](/earn/holder-rewards)). There is no bonding curve and no graduation event; trading is live the instant the launch transaction confirms. See [Introduction](/introduction) for the framing and [Launch overview](/launch/overview) for the on-chain shape.
+
+### How do I launch a coin?
+
+Three ways, all producing the same on-chain result:
+
+- **From the site.** Connect a wallet at [archr.win/launch](https://archr.win/launch), fill the form, sign. Optional dev-buy. See [first launch on the site](/getting-started/first-launch-site).
+- **From Reddit.** Reply `u/Archer_Bot !deploy SYMBOL [name]` to any thread the bot can see. See [first launch from Reddit](/getting-started/first-launch-reddit).
+- **From X.** Tweet `@archrdeploy !deploy SYMBOL [name]`. See [first launch from X](/getting-started/first-launch-twitter).
+
+### Is the liquidity really permanently locked?
+
+Yes, and on new coins it is stronger than locked: the launch-wall LP position is minted directly to the burn address `0x000000000000000000000000000000000000dEaD`, so it is owned by no one and no address (the platform included) can withdraw or move it. One Blockscout click on the position shows the burn address as owner. The only value that leaves the pool is the 1% ETH skim, paid to the coin's creator. Coins launched before the current program hold an equivalent permanently locked LP NFT in the launcher factory. See [risks → liquidity is burned, rewards are ETH](/reference/risks#liquidity-is-burned-rewards-are-eth).
+
+### What does a coin look like on-chain?
+
+A plain, 10-line OpenZeppelin ERC-20 with fixed supply `1,000,000,000e18` (1 billion, 18 decimals). No tax, no transfer hooks, no owner controls on the token itself. See [Coin.sol](/network/contracts#coin). Every token deployed through Archr uses the same template.
+
+### What does the pool look like?
+
+Standard Uniswap V4: **LP fee 0**, **tickSpacing 200**, paired against native ETH, with a hook that skims 1% of the ETH side of every trade to the coin's creator. The coin's LP share is added as single-sided liquidity at launch: 95% of supply on a plain launch, less on [airdrop](/launch/airdrop-mode) and [migration](/launch/migrations) launches. Coins launched before the current program trade on a Uniswap V3 pool at the 1% fee tier against WETH. See [trading overview → where to swap](/trade/overview#where-to-swap) for where to swap.
+
+### Can I buy some of my own coin in the launch transaction?
+
+Only from [the site launch flow](/getting-started/first-launch-site). The launch form has an optional dev-buy field that adds a same-transaction swap; if the swap fails, the whole launch reverts and the coin is not deployed. Reddit and X triggers do not support dev-buys. See [dev-buy](/launch/dev-buy).
+
+### What does it cost to launch?
+
+Native ETH on 4663 for gas, on the order of 0.005–0.01 ETH per launch. If you include a dev-buy, add the ETH you are spending on that buy. There is no separate platform fee at launch time. See [launch overview](/launch/overview#cost-to-launch).
+
+### Are name and symbol unique?
+
+Mostly no. Two different launchers can each ship a `PEPE`; the unique identifier is always the contract address. The exception is the [ticker registry](/launch/tickers): launching a ticker on the disabled list reverts, enforced by the contract. See [launch overview](/launch/overview#name-and-symbol-rules) and the next two questions.
+
+### Can a taken ticker be launched again?
+
+Yes, until it is disabled. Once a ticker is disabled in the [ticker registry](/launch/tickers) (through OG protection or a [migration](/launch/migrations)), launching it reverts; the contract matches case-insensitively for standard letter/digit symbols. Symbols containing emoji or lookalike characters cannot be protected. `ARCHR` is disabled from day one.
+
+### What is an OG ticker?
+
+A ticker reserved for a coin that has proven itself. When a coin's trailing 48-hour median FDV holds at or above **$200k** (measured off-chain by the platform from on-chain prices), the platform stages an on-chain disable of its ticker, publicly evented. 14 days later, anyone can activate the disable; the contract enforces the window and the program cannot skip it, subject to the contract owner's publicly evented veto and emergency override. Coins with the same ticker launched before activation keep existing, and coins launched before the current program qualify too. See [tickers](/launch/tickers).
+
+### What is a migration?
+
+A community takeover: moving a coin from another platform onto Archr. Migration is self-serve, so anyone can start one from the launch page with no approval step. A migration deploys a fresh coin, escrows 2% of supply for ARCHR holders, records whoever launches it as [creator](/launch/creator-fees), disables the coin's ticker in the same transaction, and airdrops up to 70% of supply pro-rata to the source coin's holders. The pot is sized on-chain from the source supply held outside its own LP, measured at the block the migration lands. One migration per source coin, ever, enforced on-chain. See [migrations](/launch/migrations).
+
+### Is trading 24/7?
+
+Yes. Every new pool is a plain V4 pool on 4663 (earlier coins trade on V3), with no market hours and no session boundaries. See [trading overview](/trade/overview).
+
+### What wallets are supported on the site?
+
+Anything the wagmi wallet adapter supports: MetaMask, Rabby, WalletConnect. See [wallet setup](/getting-started/wallet-setup).
+
+### What do ARCHR holders receive, and when?
+
+Every coin launched under the current program escrows **5% of its supply (50,000,000 tokens)** on-chain in the launch transaction. 11.6M unlocks at 24 hours, 11.6M at 72 hours, and 11.6M at 168 hours after launch, each paid pro-rata to ARCHR holders; a 15.2M early-adopter bonus at 168 hours goes to the coin's own early buyers. Amounts and unlock times are fixed at launch and enforced by the escrow contract; recipient lists are computed off-chain by the platform from published snapshot blocks. Coins launched before the current program stay on the legacy [fee-flywheel](/earn/archr-flywheel). See [holder rewards](/earn/holder-rewards).
+
+### How do I become eligible for the airdrops?
+
+Hold [ARCHR](/network/contracts#archr-token). Per tranche, your counted weight is the smaller of your balance at the coin's launch block and your balance at that tranche's unlock block, and it must be worth at least **$10**. Buying after a coin launches earns nothing from that coin; it starts earning from the next launch (typically within about 24 hours). Selling before an unlock zeroes that unlock's weight. Payouts are pro-rata by weight with no top-N cutoff. Eligibility is computed off-chain by the platform and published. See [holder rewards](/earn/holder-rewards).
+
+### Can the platform take the escrowed tokens?
+
+Not during the program. No function exists to withdraw escrowed funds before their unlocks, and early or oversized release reverts; the escrow contract enforces both. After 30 days from launch, the contract owner can sweep only that coin's unspent leftovers (failed sends, dust, pots with no eligible recipients), and the 30-day gate is itself enforced on-chain. See [holder rewards](/earn/holder-rewards).
+
+### Who gets a coin's trading fees?
+
+Its creator, entirely, paid as ETH. The pool's hook skims 1% of the ETH side of every trade, and 100% of it is collectable to the wallet recorded as [creator](/launch/creator-fees) at launch, enforced on-chain with no platform cut. Site and user-linked launches record the launching wallet automatically; Reddit and X launchers claim afterward by replying `!claim 0x<address>` (see [creator fees](/launch/creator-fees) for the mechanics). Coins launched before the current program have no creator path; their fees stay in the legacy [fee-flywheel](/earn/archr-flywheel).
+
+### What is ARCHR itself?
+
+The Archr platform token. Holding it earns [holder rewards](/earn/holder-rewards) from every new coin's escrow, and the legacy [fee-flywheel](/earn/archr-flywheel) airdrops from coins launched before the current program. See [Contracts → ARCHR token](/network/contracts#archr-token).
+
+### Is Archr live on mainnet?
+
+Yes. The three trigger surfaces (site, Reddit, X) all run against Robinhood Chain mainnet (chainId 4663). See [Contracts](/network/contracts) for the launcher addresses and [Introduction](/introduction) for how the surfaces fit together.
+
+### What happens if a launch fails halfway?
+
+It cannot. Every launch is atomic: coin deploy, escrow funding, pool creation, LP mint, and (on the site) dev-buy all succeed together or the entire transaction reverts. There is no "coin deployed but pool creation failed" state; there is no "pool created but LP mint failed" state. See [dev-buy](/launch/dev-buy) for the invariant.
+
+### What happens if the Chainlink price feed is stale during a launch?
+
+The launch reverts fail-closed rather than proceeding on a stale price. This can briefly block new launches during a chain-level incident but does not affect trading on already-deployed pools. See [risks → price and oracle risk](/reference/risks#price-and-oracle-risk).
+
+### Can launches be paused?
+
+Reddit and X launches can be paused for maintenance. Comments and mentions are still read, but no launches are broadcast until the pause lifts. Site launches and pool trading are unaffected. Maintenance windows are posted at [@archrdeploy](https://x.com/archrdeploy).
+
+### Where do I report bugs?
+
+Non-security bugs: DM [@archrdeploy](https://x.com/archrdeploy) on X. Security vulnerabilities: **do not** post publicly. See [security](/reference/security) for the private disclosure process.

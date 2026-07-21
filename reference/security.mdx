@@ -1,0 +1,33 @@
+---
+title: Security
+description: How to report a security vulnerability in Archr: responsible disclosure via X, scope, and safe-harbor.
+audience: trader
+---
+
+If you have found a security vulnerability in Archr, report it **privately**. Do not open a public GitHub issue and do not post details in a public reply to [@archrdeploy](https://x.com/archrdeploy); public disclosure of an unpatched flaw puts every launcher and holder at risk.
+
+## How to report
+
+DM [@archrdeploy on X](https://x.com/archrdeploy) to open a private line and wait for an operator to move the conversation to DMs before sharing details or a proof of concept. **Do not post vulnerability details in public tweets or replies**, and do not open a GitHub issue.
+
+Give the team a reasonable window to investigate and ship a fix before disclosing the issue anywhere publicly.
+
+## Scope
+
+In scope:
+
+- The on-chain contracts: the current [`ArchrFactoryV3`](/network/contracts#archrfactoryv3), [`ArchrHookV3`](/network/contracts#archrhookv3), [`ArchrLaunchpadV3`](/network/contracts#archrlaunchpadv3), and [`TrancheEscrow`](/network/contracts#trancheescrow), plus the earlier [`ArchrFactoryV2`](/network/contracts#archrfactoryv2), [`WebFactory`](/network/contracts#webfactory), [`ArchrLaunchpad`](/network/contracts#archrlaunchpad), [`RedditFactory`](/network/contracts#redditfactory), [`TwitterFactory`](/network/contracts#twitterfactory), [`Coin`](/network/contracts#coin), and [`ArchrLauncher`](/network/contracts#archrlauncher). See [Contracts](/network/contracts) for the address list.
+- The archr.win frontend at [archr.win](https://archr.win): client-side vulnerabilities, wallet-interaction flaws, socials-storage sig-bypass.
+- The public routes on `archr.win/api/*` that read or write coin metadata.
+
+Out of scope: third-party infrastructure, dependencies, and services Archr does not operate (Robinhood Chain itself, Uniswap V3 and V4, Chainlink feeds, Vercel, wallet extensions, RPC providers); denial-of-service against public endpoints; and findings that require physical access to a user's device or social engineering of unrelated individuals.
+
+## Good-faith safe harbor
+
+We will not pursue or support legal action against researchers who, in good faith:
+
+- Report a vulnerability through the private channel above.
+- Avoid privacy violations, data destruction, and any disruption to launched coins, LP positions, or other users.
+- Give the team a reasonable opportunity to remediate before any public disclosure.
+
+Testing should never put other users' funds or positions at risk. If in doubt about whether an action is in scope, ask first.

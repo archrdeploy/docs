@@ -1,0 +1,49 @@
+---
+title: Your first launch on the site
+description: Launch a coin from archr.win. Connect, fill the form, sign one transaction. Optional dev-buy.
+audience: launcher
+---
+
+If you have not connected yet, start at [wallet setup](/getting-started/wallet-setup). For product framing, read the [introduction](/introduction) first.
+
+<Note>
+Launches are irreversible. 95% of the coin's supply seeds a V4 pool at deploy time and the launch-wall LP is burned to the dead address, so it cannot be withdrawn by anyone, launcher included; the other 5% goes to the on-chain [holder rewards](/earn/holder-rewards) escrow. Read [dev-buy](/launch/dev-buy) and [risks](/reference/risks) before you sign.
+</Note>
+
+<Steps>
+  <Step title="Open the launch form">
+    Open [archr.win/launch](https://archr.win/launch). If your wallet is not connected the page will prompt you first. The launch form is the only route on the site that writes to the chain.
+  </Step>
+
+  <Step title="Name and symbol">
+    Enter a **name** (up to 32 characters, letters and digits) and a **symbol** (short ticker, uppercase by convention; the same input rules apply). Both fields are sanitized before signing.
+
+    <Tip>
+      The site does not enforce global uniqueness on name or symbol. Two different launchers can each ship a `PEPE`. The unique identifier is the deployed contract address, always shown after launch. Traders looking for your coin should verify by address.
+    </Tip>
+  </Step>
+
+  <Step title="Optional dev-buy">
+    If you want to buy a share of your own coin's supply in the launch transaction, enter an ETH amount in the **Dev-buy** field. The site quotes the amount of coin you will receive at the launch tick and derives a minimum-out from your slippage tolerance. Leave the field at 0 to launch without a dev-buy.
+
+    A dev-buy is a **swap** through the newly-created pool in the same transaction. If the swap reverts (insufficient liquidity, an out-of-band price move, or any other cause), the entire launch reverts and the coin is not deployed. Your ETH stays in your wallet minus the gas the reverted call spent. See [dev-buy](/launch/dev-buy) for the guarantee.
+  </Step>
+
+  <Step title="Optional socials">
+    Add a short description, a Twitter/X handle, a Telegram invite, or a website URL if you want. Socials are **not** encoded into the launch transaction. They are stored off-chain, keyed by the deployed token address, and can only be set or edited by the wallet that launched the coin (verified by signature check).
+  </Step>
+
+  <Step title="Review and sign">
+    The review panel shows: the coin's contract address (deterministic from your wallet + block + name + symbol via CREATE2), the pool address, the launch tick, the amount of ETH you are spending, and the minimum-out for the dev-buy. Click **Launch** and approve the transaction in your wallet. See [dev-buy → rejection reasons](/launch/dev-buy#rejection-reasons) if the launch signature reverts.
+  </Step>
+
+  <Step title="Verify on-chain">
+    After the transaction confirms, the site routes you to `/token/[address]`, the coin's page. It shows the stats panel (supply, pool liquidity, current price), a price chart, the swap widget, and (if you saved socials) the social panel. Verify:
+
+    - The coin's contract on Blockscout: `https://robinhoodchain.blockscout.com/address/<coin>`.
+    - The V4 pool state on Blockscout, via the coin's page and the token's transfers.
+    - The launch-wall LP position is owned by the burn address `0x…dEaD`. That is the "liquidity is burned" invariant, one explorer click away.
+  </Step>
+</Steps>
+
+Once your coin is live, share the coin's page. The wallet that signed the launch is recorded on-chain as the coin's creator, and 1% of the coin's trading volume is collectable to that wallet as ETH: the pool's hook skims 1% of the ETH side of every trade, anyone can trigger the collect, and the contract routes the entire amount to the creator with no platform cut. See [creator fees](/launch/creator-fees) for the mechanics.

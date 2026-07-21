@@ -1,0 +1,45 @@
+---
+title: Wallet setup
+description: Add Robinhood Chain (4663) to your wallet, fund it with ETH for gas, and connect to Archr.
+audience: launcher
+---
+
+The same wallet setup applies whether you plan to launch a coin, buy one, or hold ARCHR.
+
+## 1. Install a supported wallet
+
+Archr uses [ConnectKit](https://docs.family.co/connectkit) on top of [wagmi](https://wagmi.sh), so every browser-injected EVM wallet the adapter supports will connect. MetaMask and Rabby are the two you are most likely to have; either works the same once connected.
+
+- **MetaMask** ([metamask.io](https://metamask.io)). Browser extension on Chrome, Brave, Firefox, Edge; iOS and Android apps.
+- **Rabby** ([rabby.io](https://rabby.io)). Browser extension with a stronger transaction-preview UI.
+
+Install the extension, create a wallet, and write down the seed phrase on paper. Never share it and do not paste it into a cloud-synced password manager.
+
+## 2. Add Robinhood Chain (4663)
+
+Archr lives on Robinhood Chain mainnet, chainId **4663**. If your wallet does not have it pre-listed, add it manually:
+
+| Field           | Value                                                     |
+| --------------- | --------------------------------------------------------- |
+| Network name    | Robinhood Chain                                           |
+| Chain ID        | `4663`                                                    |
+| RPC URL         | `https://rpc.mainnet.chain.robinhood.com/`                |
+| Currency symbol | ETH                                                       |
+| Block explorer  | `https://robinhoodchain.blockscout.com`                   |
+
+For the canonical Robinhood Chain documentation and alternative RPC endpoints (including keyed Alchemy access) see [Robinhood's protocol contracts page](https://docs.robinhood.com/chain/protocol-contracts).
+
+Adding the network by hand is optional. The site auto-prompts a network switch when you connect.
+
+## 3. Fund the wallet with ETH
+
+Robinhood Chain uses native ETH for gas. Bridge ETH from Ethereum mainnet via the [Robinhood Chain bridge](https://docs.robinhood.com/chain); the canonical L1 bridge contracts are listed on Robinhood's docs site. A small amount is enough for launching or trading: a launch transaction from the site costs on the order of 0.005–0.01 ETH.
+
+## 4. Connect and verify
+
+Open [archr.win](https://archr.win) and click **Connect Wallet**. Approve the connection in your wallet, then check that:
+
+- The header shows your address truncated.
+- The chain indicator reads Robinhood Chain (4663). If it does not, switch networks in the wallet; every write action on Archr assumes 4663.
+
+You are ready. Head to [your first launch](/getting-started/first-launch-site) to deploy a coin, or [trading overview](/trade/overview) to buy one. Read the [risks](/reference/risks) before you commit real funds.

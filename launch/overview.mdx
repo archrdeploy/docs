@@ -1,0 +1,75 @@
+---
+title: Launch overview
+description: What a launch does on-chain (fixed supply, 5% holder-rewards escrow, single-sided V4 liquidity burned to the dead address) and the rules for name, symbol, ticker, and dedupe.
+audience: launcher
+---
+
+Every launch on Archr produces the same on-chain shape, whether it was triggered from [the site](/getting-started/first-launch-site), [Reddit](/getting-started/first-launch-reddit), or [X](/getting-started/first-launch-twitter). This page covers what actually happens and what the caller-facing rules are. Site launches can also turn on [Airdrop Mode](/launch/airdrop-mode) to reserve part of the supply for another coin's holders.
+
+## What a launch produces
+
+A single launch transaction does five things atomically:
+
+1. Deploys a plain [`Coin`](/network/contracts#coin) with fixed supply **1,000,000,000e18** (1 billion, 18 decimals). See [FAQ → what does a coin look like on-chain](/reference/faq#what-does-a-coin-look-like-on-chain). The mint recipient is the launcher factory.
+2. Escrows **5% of the supply (50,000,000 coins)** into the on-chain [`TrancheEscrow`](/network/contracts#trancheescrow) in the same transaction. That pot funds the [holder-rewards program](/earn/holder-rewards) for ARCHR holders and the coin's own early buyers; the amounts and unlock times are fixed at launch and enforced by the contract.
+3. Creates a Uniswap V4 pool for `(native ETH, Coin)` at an **LP fee of 0** and **tickSpacing 200**, with the [creator-reward hook](/network/contracts#archrhookv3) attached. The pool is initialized at a launch tick derived from a target FDV in USD, read from the live Chainlink ETH/USD feed on 4663. For a plain launch the target is **$1,662**.
+4. Adds the remaining **95% of the supply (950,000,000 coins)** as **single-sided liquidity**: a sell wall spanning from just above the launch tick up to the top of the usable range. There is no ETH on the buy side at launch; buyers eat into the wall in order.
+5. Emits a `Launched` event and mints the launch-wall LP position **directly to the burn address `0x000000000000000000000000000000000000dEaD`**. The position is [owned by no address](/reference/risks#liquidity-is-burned-rewards-are-eth), so nobody can withdraw or move it.
+
+Trading is live the instant the transaction confirms, but the position cannot be withdrawn or moved by anyone.
+
+## Fixed shape, not a bonding curve
+
+Archr does not use a bonding curve. There is no "launch phase" that later graduates into a real AMM; a launch **is** the AMM going live. Pricing is standard Uniswap V4 concentrated-liquidity math from block one, so any tool that speaks V4 (aggregators, the swap widget on each coin's page, direct router calls) can trade against the pool.
+
+## Name and symbol rules
+
+Both fields are sanitized before signing. The rules are the same on every trigger surface:
+
+- Up to **32 characters** each (the client sanitizer caps length).
+- Letters, digits, and a small set of safe punctuation are allowed. Other characters are stripped.
+- Whitespace is trimmed and collapsed.
+- Empty name defaults to the symbol.
+
+Names and symbols are **not** globally unique. Two different launches can each ship a `PEPE`, unless that ticker has been disabled; the unique identifier is always the deployed contract address, shown on the coin's page and in the trigger reply.
+
+## Disabled tickers
+
+The factory keeps a registry of disabled tickers. A launch whose symbol is on it reverts; this is enforced by the contract. Matching is case-insensitive for standard symbols (letters and digits, 2 to 12 characters), so disabling `PEPE` also blocks `pepe`. `ARCHR` is disabled from day one. Tickers get onto the registry through [OG protection](/launch/tickers) and [migrations](/launch/migrations); the tickers page also covers the registry's honest limits (emoji and lookalike characters cannot be protected).
+
+## Dedupe
+
+Each trigger surface has its own dedupe key:
+
+| Surface | Dedupe key                                    |
+| ------- | --------------------------------------------- |
+| Site    | One coin per (sender, block, name, symbol)    |
+| Reddit  | One coin per comment                          |
+| X       | One coin per tweet                            |
+
+Each key is enforced on-chain: a launch keyed to a value that has already produced a coin reverts `AlreadyLaunched`. On the bot-driven surfaces this is the crash-safety backstop for a lost or replayed trigger.
+
+## The launch tick
+
+The launch tick is where the sell wall starts: the lowest price at which coin can be bought. It is derived from a target initial fully-diluted valuation in USD, read live from the [Chainlink ETH/USD feed](https://docs.robinhood.com/chain/oracles-and-price-feeds) on 4663, then snapped to a valid tick (a multiple of the pool's `tickSpacing = 200`). Because the coin sorts above native ETH in the pool (ETH is `currency0`, the coin is `currency1`), the launch tick is a **positive** integer.
+
+For a plain launch the target FDV is **$1,662**. [Airdrop Mode](/launch/airdrop-mode) launches put a smaller share of supply in the pool, so their targets are higher ($5,567 and $19,200); the targets are set so the pool holds the same liquidity depth at every tier.
+
+## Cost to launch
+
+Every launch on Archr pays gas in native ETH on 4663. A typical launch is on the order of 0.005 to 0.01 ETH. There is no launch fee and no platform cut of the coin's trading rewards: 100% of the pool's 1% ETH skim is collectable to the coin's recorded [creator](/launch/creator-fees) as ETH, and the contract has no function that routes it anywhere else.
+
+If you launch from [the site](/getting-started/first-launch-site) with a non-zero dev-buy, add the ETH you are spending on that buy to the total. A plain Reddit or X launch costs you nothing. With the [`and buy` suffix](/launch/dev-buy#dev-buys-from-reddit-and-x), the transaction is sent from your linked wallet, which pays the buy amount and the gas.
+
+## What happens right after
+
+The moment the transaction confirms:
+
+- The coin's contract is deployed at a deterministic address (CREATE2). The coin sorts above native ETH, so it is `currency1` in the pool.
+- The pool is initialized at the launch tick.
+- 95% of the supply sits in the pool as single-sided liquidity; 5% sits in the escrow, unlocking on the [holder-rewards schedule](/earn/holder-rewards).
+- The launch-wall LP position is owned by the burn address.
+- The coin's [creator](/launch/creator-fees) is recorded (site and user-linked launches record the launching wallet automatically; Reddit and X launches claim afterward).
+- The swap widget on `archr.win/token/<address>` is live.
+
+Traders can start buying immediately. See [trading overview](/trade/overview) for the pool shape and slippage behavior.

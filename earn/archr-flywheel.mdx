@@ -1,0 +1,57 @@
+---
+title: ARCHR fee-flywheel
+description: The legacy program that recycles locked-LP swap fees from coins launched before the current program into pro-rata airdrops to the top-50 ARCHR holders.
+audience: holder
+---
+
+<Note>
+The flywheel is the legacy program: it applies only to coins launched before the current program. A new coin's locked-LP fees are collectable by its [creator](/launch/creator-fees), and ARCHR holders earn from every new coin's [escrowed 5%](/earn/holder-rewards) instead.
+</Note>
+
+Coins launched before the current program trade on a Uniswap V3 pool whose LP is permanently locked, so the only value that can ever leave a position is the **1% swap fees** on trading. Those fees feed a recurring airdrop program that pays the top-50 [ARCHR](/network/contracts#archr-token) holders in the coin's own supply. New coins are different: they trade on a V4 pool whose 1% ETH skim goes to the coin's [creator](/launch/creator-fees) as ETH, they carry no locked-LP fees to recycle, and they never enter the flywheel.
+
+## What ARCHR is
+
+ARCHR is the [Archr platform token](/network/contracts#archr-token): a plain fixed-supply ERC-20 on 4663 with a single-sided V3 pool against WETH. Holding ARCHR is the sole eligibility condition for the flywheel airdrops described below. For new launches, ARCHR holders earn through [holder rewards](/earn/holder-rewards).
+
+## The mechanic, end-to-end
+
+For each legacy coin, the program executes this loop:
+
+1. **Collect.** Accrued swap fees (WETH + coin) on each locked LP are periodically swept to the [distributor](/network/contracts#archr-fee-flywheel-distributor). Because the position is locked, the sweep cannot decrease liquidity; only the fee bucket moves.
+2. **Swap the WETH leg.** The distributor swaps the WETH it just received into more of the same coin, using the coin's own V3 pool. That converts the entire fee bundle into a stack of the coin itself.
+3. **Wait for the threshold.** Once the distributor's balance of a given coin reaches **1% of the coin's fixed supply, or 10,000,000 tokens** (against the 1,000,000,000 supply every Archr coin has), that coin is eligible for an airdrop.
+4. **Snapshot the top-50 ARCHR holders.** At the trigger, the platform computes the ARCHR holder set off-chain from on-chain balances and ranks it; the top 50 by balance are selected. The [ARCHR/WETH pool](/network/contracts#archr-weth-v3-pool) is excluded (it holds unsold single-sided liquidity, not a real balance).
+5. **Airdrop pro-rata.** The 10,000,000 tokens are split among the top 50 in proportion to their ARCHR balance and sent in 50 transfers. The distributor's balance of that coin drops to zero, and the cycle for that coin restarts.
+
+Because the trigger is a per-coin threshold that resets after each airdrop, a coin that keeps accumulating fees can fire multiple airdrops over its life. Every time its fee bucket recycles into another 10M of the coin, the top-50 gets another slice.
+
+## Why it exists
+
+Locked LP made these coins rug-proof, but by construction it also traps value. A locked position is worth nothing to anyone unless the fees get moved somewhere. The flywheel is the pipe. Instead of the launcher owner sweeping every coin's fees to their own address, the fees are systematically converted back into the coin and returned to the ARCHR holders who make the platform work. New coins take a different route: the launch-wall LP is burned to the dead address (stronger still, since not even a locked-LP owner exists), and their trading rewards flow to the [creator](/launch/creator-fees) as ETH, enforced by the contract from launch.
+
+## What counts as an ARCHR holder
+
+Every regular EOA or contract that holds ARCHR at the snapshot block is eligible, ranked by balance. The **ARCHR / WETH V3 pool** address is the only exclusion; its balance is unsold single-sided liquidity, not a real holder, and a slice sent there would be trapped.
+
+Everyone else (retail wallets, contracts, market makers) is treated the same and ranked purely by balance.
+
+## What holders receive
+
+An airdrop is always in the **coin that triggered it**, not in ARCHR itself. If SNOO's fees cross the threshold, the top-50 ARCHR holders receive a slice of SNOO. If a different coin crosses next, the top-50 (as of that snapshot block) receive a slice of that coin. You end up with a growing portfolio of legacy Archr coins over time, weighted toward the ones that trade the most (because they accrue fees the fastest).
+
+## Pace and cadence
+
+Airdrops are not scheduled to a calendar. A busy coin can fire multiple airdrops in a week; a quiet coin may never reach the threshold at all. The set of participating coins is closed: only coins launched before the current program are in it, and no new coin ever joins.
+
+## Parameters
+
+The flywheel continues for legacy coins with its current settings: top 50 holders, threshold 10,000,000 tokens (1% of the 1B supply per coin), snapshot at trigger block. These are program parameters, computed and applied off-chain by the platform; documented changes will be reflected on this page. The ARCHR-holder program for new launches is [holder rewards](/earn/holder-rewards), which pays every holder above a $10 floor with no top-N cutoff. See [risks → program risk](/reference/risks#program-risk) for how to think about a program as a holder.
+
+## Where to see it happen
+
+Each airdrop is 50 on-chain transfers from the distributor to a snapshot of 50 wallets, all in the same block. To watch them:
+
+- The distributor address is public; see [Contracts → distributor](/network/contracts#archr-fee-flywheel-distributor).
+- Any Blockscout query for the distributor's outgoing transfers of a given coin shows the airdrop rows for that coin.
+- Follow [@archrdeploy](https://x.com/archrdeploy) for airdrop announcements.

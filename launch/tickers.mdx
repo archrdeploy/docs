@@ -1,0 +1,39 @@
+---
+title: Tickers
+description: The disabled-ticker registry, how OG coins earn ticker protection at a $200k 48-hour median FDV, and what the registry honestly can and cannot block.
+audience: launcher
+---
+
+Ticker symbols on Archr are free-for-all by default: two launches can each ship a `PEPE`, and the contract address is always the real identifier. The exception is the **disabled-ticker registry**. The factory keeps an on-chain list of disabled tickers, and a launch whose symbol is on it reverts; this is enforced by the contract, on every launch surface. `ARCHR` is on the list from day one.
+
+## How matching works
+
+For standard symbols (letters and digits, 2 to 12 characters) matching is **case-insensitive**: disabling `PEPE` also blocks `pepe`, `Pepe`, and every other casing. The contract folds case before checking the registry, so there is no casing trick that slips past a disable.
+
+## What the registry cannot block
+
+Symbols containing emoji, non-ASCII unicode, or lookalike characters **cannot be protected**. Disabling `PEPE` blocks `pepe` but not a homoglyph variant that swaps in a visually identical character from another alphabet. The registry protects the exact case-folded string for standard symbols and nothing more. Always verify a coin by its contract address, shown on its page and in [Contracts](/network/contracts), never by its ticker alone.
+
+## OG protection
+
+A coin that sustains real traded value earns protection for its ticker:
+
+1. **Trigger.** When a coin's trailing 48-hour median FDV stays at or above **$200,000**, the platform stages a disable of that ticker. The median is measured by the platform from on-chain prices; the measurement is platform-computed, and the staging transaction is on-chain and publicly evented.
+2. **The 14-day window.** Fourteen days after staging, **anyone** can send the activation transaction; activation is permissionless. The contract enforces the window: the program cannot skip it, and an early activation reverts.
+3. **After activation.** New launches with that ticker revert. Coins with the same ticker that launched **before** activation keep existing; a disable is forward-looking only and touches no deployed coin.
+
+The contract owner holds two levers over this path, both publicly evented: it can **veto** a staged disable during the window, and it can act directly in an emergency. The window is contract-enforced against the platform; it is not unconditional against the owner. Anyone can watch the events on Blockscout to see exactly what was staged, vetoed, or activated, and when.
+
+Coins launched before the current program are OG-eligible too: a legacy coin whose 48-hour median FDV holds above $200,000 earns the same staged protection for its ticker.
+
+The site shows an **OG** tag on protected coins. The tag reflects the platform's median measurement, and the underlying disable is verifiable on-chain.
+
+## Migrations
+
+A [migration](/launch/migrations) disables its ticker **immediately**, in the same transaction that launches the migrated coin. There is no 14-day window on this path: a migration is permanent and can only happen once per source, so leaving the ticker open for two weeks would only invite squatting on the exact name being migrated.
+
+## What this means when launching
+
+- Pick any standard symbol that is not on the registry; the launch reverts if it is.
+- A ticker you launch is not reserved for you by launching it. Protection comes only from the OG path (sustained $200k median FDV) or a migration.
+- Nothing about the registry changes the [name and symbol sanitization rules](/launch/overview#name-and-symbol-rules), which still apply first.

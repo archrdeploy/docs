@@ -1,0 +1,47 @@
+---
+title: Migrations
+description: Community takeovers. Anyone can move a coin from another platform to Archr, airdropping up to 70% of the new supply to its existing holders and disabling its ticker at launch.
+audience: launcher
+---
+
+A community running a coin on another platform can move it to Archr. A migration launches a fresh coin with Archr's [burned launch liquidity](/launch/overview#what-a-launch-produces), airdrops most of the new supply to the source coin's existing holders, records whoever launches it as [creator](/launch/creator-fees), and [disables the ticker](/launch/tickers) so nobody can launch over the name.
+
+Migration is self-serve. Anyone can start one from the launch page; there is no application and no approval step. The contract enforces two rules: a source coin migrates once and only once, and the coin being migrated has to come from outside Archr (a coin already launched here cannot migrate again).
+
+## What a migration launch does
+
+On launch, a single transaction:
+
+1. Deploys a fresh coin (fixed 1,000,000,000 supply, same shape as every Archr coin).
+2. Escrows **2%** of the supply for [ARCHR holder rewards](/earn/holder-rewards).
+3. Allocates the source-holder pot, up to **70%** of the supply (sizing below).
+4. Records whoever sent the transaction as the coin's **creator**, so [1% of trading volume](/launch/creator-fees) routes to them as ETH, enforced by the contract.
+5. **Disables the coin's ticker immediately**, in the same transaction; no 14-day window applies on this path.
+6. Places the remaining supply, at least **28%**, as the single-sided sell wall, with the launch-wall LP burned to the dead address. The launch FDV target scales with the pot, up to about **$30,000**, so pool liquidity depth matches other launches.
+
+## How the pot is sized
+
+The source-holder pot is the **smaller** of:
+
+- **80% of the source coin's supply held outside its own LP**, and
+- **70% of the new coin's supply.**
+
+The out-of-LP figure is measured on-chain at the block the migration lands, and the launch page shows you the resulting pot and target FDV before you confirm. The 80% haircut ties the pot to the supply the community actually holds; tokens sitting in the source coin's own pool do not count toward it.
+
+## How holders are paid
+
+Source holders receive the pot **pro-rata**: holding twice as much of the source coin at the snapshot block means receiving twice the share of the new coin. The recipient list is computed from the snapshot block and paid as batched on-chain transfers, all visible on Blockscout. There is no claim step; tokens arrive at the same addresses that held the source coin.
+
+## The escrow
+
+The migration escrow is **2%** (against 5% on other launches) and pays ARCHR holders in **three tranches at 24h, 72h, and 168h** after launch. Migrations carry **no early-adopter bonus**: the early-buyer pot rewards first buyers of a brand-new coin, and a migrated coin arrives with its holder base already in place. Tranche amounts and unlock times are fixed at launch and enforced by the escrow contract; see [holder rewards](/earn/holder-rewards) for eligibility.
+
+## One migration per source, first come first served
+
+A source coin can migrate **once, ever**. This is enforced on-chain: a second migration against the same source reverts, whoever sends it. Because the launch is permissionless and the record is permanent, the first migration to land is the one that sticks, and its sender becomes the new coin's creator.
+
+If you are moving your own community, launch the migration yourself rather than announcing the plan first. Whoever submits the transaction first claims the source and its creator fees, and the parameters they choose (including the size of the holder pot) are locked in for good. There is no way to reverse a migration or to migrate the same source a second time.
+
+## How to migrate
+
+Open the [launch page](https://archr.win/launch), choose Migration, and enter the source coin's contract address. The page reads the source on-chain, shows the pot and target FDV, and launches the new coin when you confirm.

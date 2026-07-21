@@ -1,0 +1,76 @@
+---
+title: Dev-buy
+description: The launch form's optional dev-buy. Buy a share of your coin's supply in the same transaction that deploys it; if the buy fails, the whole launch unwinds.
+audience: launcher
+---
+
+The site's [launch form](/getting-started/first-launch-site) lets you optionally buy a share of your own coin's supply in the same transaction that deploys the coin and creates the pool. This is the **dev-buy** option, and this page explains the on-chain invariant that keeps it safe: **the deploy and the buy succeed together, or neither happens.**
+
+<Note>
+On the site, the dev-buy spends from the wallet that signs the launch. [Reddit](/getting-started/first-launch-reddit) and [X](/getting-started/first-launch-twitter) launches can add a dev-buy with the `and buy` suffix, paid from a wallet you link once; see [dev-buys from Reddit and X](#dev-buys-from-reddit-and-x).
+</Note>
+
+## What a dev-buy does
+
+When you click **Launch** on the site with a non-zero dev-buy amount, your wallet signs a single call to [`ArchrLaunchpadV3.launchWithBuy(...)`](/network/contracts#archrlaunchpadv3). That call, executed on-chain, does the following in one transaction:
+
+1. Calls the [launcher factory](/network/contracts#archrfactoryv3) to deploy the coin, [escrow 5% of the supply](/earn/holder-rewards), create the V4 pool, and place the sell wall into it (with the launch-wall LP burned to the dead address).
+2. Swaps your `msg.value` ETH for the coin on the newly-created pool through the [Universal Router](/network/contracts#uniswap-v4-universal-router), with the buy delivered to you (`msg.sender`) and `amountOutMinimum` set from your slippage tolerance.
+
+## What the buy fills against
+
+A dev-buy purchases from the same sell wall every other buyer sees: **950,000,000 coins** on a plain launch, or the smaller walls on [Airdrop Mode](/launch/airdrop-mode) tiers (650,000,000 on the 30% tier, 350,000,000 on the 60% tier). The escrowed 5% and any reserved airdrop share are never for sale, so a dev-buy cannot touch them.
+
+The launch form's quote walks the wall tick by tick, so the expected output accounts for real price impact at any dev-buy size, on any tier. `amountOutMinimum` is derived from that quote and your slippage tolerance.
+
+## The unwind guarantee
+
+If the buy reverts for any reason, the EVM unwinds the **entire** transaction. The coin is not deployed, the pool is not created, and your ETH stays in your wallet (minus the gas the reverted call spent). There is no state in which the coin exists but the swap failed; the site never produces an orphan launch.
+
+The guarantee closes a specific frontrun: without it, a failed dev-buy would leave the coin deployed but unbought, and a sniper could take the first real buy. Binding the two together removes that surface.
+
+## What failure looks like
+
+If the swap step reverts, the transaction fails and:
+
+- No `Launched` event is emitted; the coin's contract does not exist at the CREATE2 address.
+- Nothing was escrowed; the escrow write unwound with everything else.
+- Your ETH is refunded (the transaction reverted).
+- Your wallet pays only the gas the reverted call spent.
+
+The site's error copy is "Launch failed. Try increasing slippage." Raise slippage and retry, or reduce the dev-buy amount so it fits within your sell wall.
+
+## What the guarantee does not protect against
+
+The unwind guarantee is a **transactional** property, not a market-quality guarantee.
+
+Robinhood Chain has a public transaction ordering surface, so a large enough dev-buy can still be sandwiched by other transactions in the same block as long as your `amountOutMinimum` is loose enough to let them fit. Keep slippage tight if you are worried about MEV.
+
+If you set slippage to 100%, the dev-buy accepts any fill the pool gives you, which may be far worse than the target. The default slippage in the launch form is picked to catch most cases; raise it only when you understand why.
+
+Anything that happens after your transaction confirms is beyond the guarantee. If a whale front-runs your next buy or dumps the wall, that is normal market activity on a permissionless AMM.
+
+## Dev-buys from Reddit and X
+
+Append `and buy` and an ETH amount with an `e` suffix to the command:
+
+```
+u/Archer_Bot !deploy TICKER My Coin and buy 0.05e
+```
+
+The amount takes up to four decimal places, capped at 999 ETH. The suffix is case-insensitive.
+
+The buy spends from your own linked wallet. Link one by signing in at [archr.win/signup](https://archr.win/signup), fund it at [archr.win/fund](https://archr.win/fund), and revoke the link at any time in [archr.win/settings](https://archr.win/settings). The launch and the buy run as one transaction sent from that wallet, which pays the buy amount and the gas. The unwind guarantee above applies unchanged: if the buy fails, no coin is deployed and the wallet spends only gas.
+
+If your account has no linked wallet, or its balance cannot cover the buy plus gas, nothing is broadcast; the bot's reply links you to the signup or funding page instead.
+
+## Rejection reasons
+
+Some launches fail before they can reach the swap step:
+
+- **Insufficient ETH.** Your wallet does not have enough to cover both `msg.value` (the dev-buy amount) and the launch's gas. The site checks this before signing when possible; if the check fails at the wallet layer, the transaction never broadcasts.
+- **Disabled ticker.** A symbol on the [disabled-ticker registry](/launch/tickers) reverts the whole launch, dev-buy included. Enforced by the contract.
+- **`NoValue()` revert.** The launch-with-buy path requires `msg.value > 0`. If you use it with zero ETH, the contract reverts before reaching the swap. Use `launch(...)` for zero-value launches; the site does this automatically when the dev-buy field is 0.
+- **`BadTick()` revert.** The launch tick was outside the usable range or not a multiple of `tickSpacing = 200`. This should never happen from the site (the client computes the tick correctly) but is enforced on-chain for defense in depth.
+
+For the dedupe rule (`AlreadyLaunched`) see [launch overview](/launch/overview#dedupe).

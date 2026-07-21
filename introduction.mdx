@@ -1,0 +1,25 @@
+---
+title: Archr
+description: A self-serve token launchpad on Robinhood Chain with burned Uniswap V4 liquidity, creator rewards paid in ETH, and a time-locked airdrop program for ARCHR holders.
+---
+
+Archr is a token launchpad on [Robinhood Chain](https://docs.robinhood.com/chain) (chainId 4663). A single transaction deploys a plain fixed-supply ERC-20, creates a Uniswap V4 pool for it paired against native ETH, and places 95% of the supply into the pool as a single-sided sell wall. The remaining 5% is escrowed on-chain in the same transaction and pays out to ARCHR holders and the coin's early buyers on a fixed schedule; the amounts and unlock times are enforced by the contract. See [holder rewards](/earn/holder-rewards). The launch-wall LP position is minted **directly to the burn address**, so it is owned by no one and no address (the platform included) can ever withdraw or move it. The pool's own LP fee is 0; a hook on the pool skims 1% of the ETH side of every trade to the coin's [creator](/launch/creator-fees), paid as pure ETH. See [risks → liquidity is burned, rewards are ETH](/reference/risks#liquidity-is-burned-rewards-are-eth).
+
+There are three ways to launch a coin, and the on-chain result is identical in each: connect a wallet at [archr.win](https://archr.win) and use the launch form, reply `u/Archer_Bot !deploy SYMBOL [name]` to any Reddit thread the bot can see, or mention `@archrdeploy !deploy SYMBOL [name]` on X. The launch form additionally lets you buy a share of the supply for yourself in the same transaction. If that dev-buy swap reverts, the whole launch reverts and the coin is not deployed. See [dev-buy](/launch/dev-buy) for the invariant.
+
+Trading happens on the newly created V4 pool immediately. No bonding curve, no vesting, no graduation event. Prices discover as buyers eat through the single-sided sell wall placed at launch. The pool pairs the coin against native ETH at an LP fee of 0, and the pool's hook skims 1% of the ETH side of every buy and sell; 100% of that skim goes to the coin's recorded creator as ETH. See [creator fees](/launch/creator-fees). The escrowed 5% pays ARCHR holders and the coin's early buyers in time-locked tranches (amounts and times enforced by the contract; recipient lists computed off-chain by the platform from published snapshot blocks). See [holder rewards](/earn/holder-rewards). Coins launched before the current program keep their original behavior: they trade on a Uniswap V3 pool and their fees stay in the legacy [ARCHR fee-flywheel](/earn/archr-flywheel).
+
+## Get started
+
+- **Launchers (web):** [Your first launch on the site](/getting-started/first-launch-site). Connect a wallet, fill the form, sign one transaction.
+- **Launchers (Reddit):** [Your first launch from Reddit](/getting-started/first-launch-reddit). Reply `!deploy SYMBOL` to trigger a launch from a comment.
+- **Launchers (X):** [Your first launch from X](/getting-started/first-launch-twitter). Mention the bot with `!deploy SYMBOL` to trigger from a tweet.
+- **Launchers (fees):** [Creator fees](/launch/creator-fees). Every coin routes 1% of its trading volume to its recorded creator as ETH; Reddit and X launchers claim theirs with `!claim`.
+- **Traders:** [Trading overview](/trade/overview). How the V4 pool prices out and where to swap.
+- **ARCHR holders:** [Holder rewards](/earn/holder-rewards). How holding ARCHR through each coin's launch earns a pro-rata slice of its escrowed 5%.
+- **Risks:** [Risk disclosure](/reference/risks). Chain, liquidity, and program risks before you launch or trade.
+- **Support and private disclosure:** [X (@archrdeploy)](https://x.com/archrdeploy). The public channel; message the account for a private line to report a bug or vulnerability.
+
+## Contracts
+
+Every new launch runs through the platform's publicly verified contracts on Robinhood Chain: the launch factory that deploys the coin and burns the launch-wall LP, the pool hook that skims the 1% ETH creator reward, the site's launchpad adapter in front of the factory, and the escrow contract that holds each coin's 5%. Coins launched before the current program stay on the earlier factories, which remain deployed and keep custody of those coins' locked LPs. All are verified on Blockscout. See [Contracts](/network/contracts) for the full address list and the canonical Uniswap V4, Uniswap V3, Chainlink, and WETH addresses on 4663.

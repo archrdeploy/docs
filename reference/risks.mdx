@@ -1,0 +1,57 @@
+---
+title: Risks
+description: The risks specific to launching or trading on Archr: chain risk, market risk, program risk, and what a burned LP does and does not protect you from.
+audience: trader
+---
+
+Archr is a permissionless launchpad on a permissionless chain. Every operation you do here uses real ETH on Robinhood Chain and, apart from the platform-level guarantees called out below, is subject to the same risks as any on-chain trading venue. **Trade only what you can afford to lose.**
+
+## Chain risk
+
+Archr runs on [Robinhood Chain](https://docs.robinhood.com/chain) (chainId 4663), an Arbitrum Orbit rollup settling to Ethereum mainnet. Chain-level risks are governed by Robinhood Chain, not by Archr.
+
+If the 4663 sequencer stalls, launches and trades pause until it recovers. ETH bridged to 4663 lives on the L1 bridge contracts until you bridge it back; the standard rollup withdrawal takes on the order of a week. Public RPC endpoints can rate-limit under load, affecting UX but not deployed coins.
+
+For the canonical chain risk disclosures, see the [Robinhood Chain documentation](https://docs.robinhood.com/chain).
+
+## Liquidity is burned, rewards are ETH
+
+Every Archr launch is single-sided at deploy, with the coin's LP share (95% of supply on a plain launch, less on [airdrop](/launch/airdrop-mode) and [migration](/launch/migrations) launches) placed as the sell wall. On new coins the launch-wall LP position is minted **directly to the burn address `0x000000000000000000000000000000000000dEaD`**, so it is not owned by any address at all: nobody, the platform included, can withdraw or move it, and one Blockscout click on the position confirms the owner is the dead address. The only value that leaves is the **1% ETH skim** the pool's hook takes on every trade, which the permissionless `collectCreatorFees(token)` forwards to the coin's [creator](/launch/creator-fees) as ETH and nowhere else. (Coins launched before the current program instead hold a permanently locked LP NFT in the launcher factory, whose 1% swap fees feed the legacy [fee-flywheel](/earn/archr-flywheel); that factory has no `decreaseLiquidity` and no NFT-transfer path, so those positions are equally immovable.)
+
+This blocks the rug. A "pull liquidity" attack is not possible when the LP is owned by an address whose key does not exist. It does not block market risk (prices on a permissionless AMM can go to zero), and it does not restrict what the launcher does with the coin they bought at deploy or in the open market later. Any Reddit or X user can launch any name or symbol, including confusingly similar ones; always verify by contract address.
+
+## Price and oracle risk
+
+Launch ticks are priced from the live [Chainlink ETH/USD feed](https://docs.chain.link/data-feeds/price-feeds/addresses?network=robinhood) on 4663, with a fail-closed staleness guard: if the feed's most recent update is too old, the launch reverts rather than pricing off a stale number. Post-launch, the pool is standard V3, and prices come from the pool's own state rather than an oracle.
+
+A brief window of oracle staleness can prevent launches during a chain incident. It cannot affect trading on already-deployed pools.
+
+## Program risk
+
+The [holder rewards](/earn/holder-rewards) program mixes on-chain guarantees with platform-computed inputs, and the difference matters. Escrow pot sizes, tranche amounts, unlock times, and the 30-day no-touch window are enforced by the escrow contract: early or oversized release reverts, and no function exists to withdraw escrowed funds during the program. Recipient selection is off-chain: the ARCHR-holder snapshots behind each tranche and the early-adopter bonus qualification are computed by the platform from published snapshot blocks and published as attested lists. The pots are verifiable on Blockscout; the recipient lists depend on the platform computing them as published. The excluded addresses (the ARCHR/WETH pool, the deploy wallet, the escrow and distributor contracts, program service wallets, and burn and zero addresses) are observable on-chain; wallets operated by the platform that hold ARCHR are eligible like any other holder.
+
+[OG ticker](/launch/tickers) protection has the same split. The staged disable, the 14-day activation window, and the owner veto live on-chain and are publicly evented; the contract enforces the window and the program cannot skip it, while the contract owner holds an emergency override. The $200k trigger measurement (a trailing 48-hour median FDV) is computed off-chain by the platform. Protection also has a hard limit: it covers standard letter/digit symbols only, so disabling `PEPE` blocks `pepe` but no emoji or homoglyph variant. Always verify by contract address.
+
+[Migrations](/launch/migrations) are self-serve and permissionless: anyone can migrate any outside coin, and the first migration to land claims that source for good. Nobody checks whether the person launching a migration represents the source community, and a source can be migrated only once, so a migration you did not start can still be the one that sticks. The source-holder pot is sized on-chain from the source coin's supply held outside its own LP, measured at the block the migration lands. The on-chain parts (the 2% escrow, the same-transaction ticker disable, one migration per source coin ever) hold regardless of who launches it.
+
+The legacy [ARCHR fee-flywheel](/earn/archr-flywheel), the airdrop program that pays the top-50 ARCHR holders from the fees of coins launched before the current program, is a program rather than a smart-contract guarantee. Its parameters (threshold size, top-N cutoff, snapshot logic, exclusion list) can change. Documented parameter changes will be reflected on this page and on [ARCHR fee-flywheel](/earn/archr-flywheel).
+
+Holding ARCHR gives you a claim on these programs as they are currently configured. It does not give you a governance right, a legal claim on the platform's future fees, or a guarantee that any program continues for future launches on any particular schedule. Escrows already funded for launched coins pay out on their contract-enforced schedule regardless.
+
+## Volatility, price manipulation, and thin liquidity
+
+On any coin below a certain liquidity depth, price moves are dominated by individual buys and sells rather than aggregate supply and demand. Fresh Archr launches start with **zero** two-sided depth; every trader before you set the price. Expect large slippage on the first few trades of any coin's life, and expect prices to move sharply on either direction until liquidity thickens.
+
+Coordinated wash trading, pump-and-dump patterns, and coin-specific manipulation are outside the platform's control on any permissionless AMM. Look at flow, holder concentration, and time-in-market before treating any Archr coin as investible.
+
+## Frontrunning and MEV
+
+Robinhood Chain has a public transaction ordering surface without a private mempool. Trades on Archr coins can be sandwiched or front-run. Use the swap widget's slippage tolerance to bound your exposure, and prefer smaller trades over larger ones on thinly-traded coins.
+
+## No advice, no eligibility guarantee
+
+- **Availability is not universal.** Archr may not be available to all persons or in all regions. You are solely responsible for determining whether you are eligible to use the platform under the laws and regulations that apply to you, and for complying with them.
+- **Nothing here is financial advice.** This documentation, the app, and any associated materials are informational only. They are **not** financial, investment, legal, or tax advice, and nothing here is a recommendation to buy, sell, or hold any asset.
+- **No legal claim.** An Archr launch produces a plain ERC-20 on a permissionless AMM. It confers no legal rights, no share in the platform, and no obligation on anyone to make it go up.
+
+If you have not yet, read the [security disclosure policy](/reference/security) before you probe the contracts.

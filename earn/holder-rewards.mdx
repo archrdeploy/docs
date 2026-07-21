@@ -1,0 +1,51 @@
+---
+title: Holder rewards
+description: Every new Archr coin escrows 5% of its supply on-chain at launch and releases it in four time-locked tranches, three to ARCHR holders and an early-adopter bonus to the coin's first buyers.
+audience: holder
+---
+
+Every new coin launched on Archr escrows **50,000,000 tokens (5% of the fixed 1,000,000,000 supply)** into the [`TrancheEscrow`](/network/contracts#trancheescrow) contract, in the same transaction that creates the coin and its pool. The escrow then releases on a fixed clock: three tranches to [ARCHR](/network/contracts#archr-token) holders and one bonus to the coin's own early buyers. Holding ARCHR earns a slice of every coin the platform launches, paid in the coins themselves.
+
+Coins launched before the current program have no escrow; their fees feed the legacy [fee-flywheel](/earn/archr-flywheel) instead.
+
+## The four tranches
+
+| Tranche             | Amount     | Unlocks               | Paid to                 |
+| ------------------- | ---------- | --------------------- | ----------------------- |
+| 1                   | 11,600,000 | 24 hours after launch | ARCHR holders           |
+| 2                   | 11,600,000 | 72 hours after launch | ARCHR holders           |
+| 3                   | 11,600,000 | 168 hours after launch | ARCHR holders          |
+| Early-adopter bonus | 15,200,000 | 168 hours after launch | the coin's early buyers |
+
+The amounts and unlock times are fixed at launch and enforced by the contract: releasing a tranche early, or releasing more than its amount, reverts. No function exists for the platform to withdraw escrowed funds during the program. After **30 days** from launch the contract owner can sweep only that coin's unspent leftovers (failed sends, dust, pots with no eligible recipients); the 30-day gate is also enforced on-chain.
+
+## Eligibility for the ARCHR tranches
+
+A wallet is eligible for a tranche when its counted weight is worth at least **$10**. The weight is the smaller of two balances: the wallet's ARCHR balance at the coin's launch block, and its balance at that tranche's unlock block. The consequences:
+
+- Buying ARCHR after a coin launches earns nothing from that coin. It starts earning from the next launch, and new coins typically launch within about 24 hours.
+- Selling before an unlock zeroes that unlock's weight. Balance held through the unlock counts in full.
+- Payment is pro-rata by weight, with no top-N cutoff. Every wallet above the $10 floor is paid.
+
+A short exclusion list, observable on-chain, never receives tranches: the [ARCHR/WETH pool](/network/contracts#archr-weth-v3-pool), the deploy wallet, the escrow and distributor contracts, program service wallets, and burn and zero addresses. Wallets operated by the platform that hold ARCHR are eligible like any other holder.
+
+The contract enforces how much unlocks and when. It does not verify the holder math: recipient lists are computed off-chain by the platform from published snapshot blocks and published with each distribution. Trusting the recipient selection means trusting the platform's published computation.
+
+## The early-adopter bonus
+
+The 15,200,000-token bonus at 168 hours pays the coin's own early buyers. Qualification follows a published rule, computed off-chain by the platform:
+
+- The wallet received the tokens **directly from the coin's pool** within **24 hours** of launch, worth at least **$10** at buy time.
+- Any outbound transfer of the coin before the 168-hour unlock disqualifies the wallet entirely. Sending to another wallet, adding liquidity, and bridging all count as outbound. Hold in the buying wallet until the unlock.
+- [Dev-buys](/launch/dev-buy) qualify.
+- Buys routed through an aggregator that takes delivery of the tokens itself and forwards them do not credit the end buyer, because the pool paid the aggregator. Buying through the Archr site credits normally.
+
+## What payouts look like
+
+Every payout is in the launched coin itself: batched on-chain transfers from the escrow, sent to each recipient with nothing to claim, all visible on [Blockscout](https://robinhoodchain.blockscout.com). Holding ARCHR across many launches builds a portfolio of new Archr coins, three slices per coin.
+
+[Migration launches](/launch/migrations) escrow 2% instead of 5% and pay ARCHR holders in three tranches on the same 24/72/168-hour clock, with no early-adopter bonus.
+
+## Where this fits
+
+The escrow is the ARCHR-holder program for new launches; the [fee-flywheel](/earn/archr-flywheel) continues only for coins launched before it. A new coin's trading fees go to its [creator](/launch/creator-fees) as ETH, separate from this escrow.

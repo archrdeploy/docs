@@ -1,0 +1,71 @@
+---
+title: Your first launch from X
+description: Trigger a coin launch by mentioning `@archrdeploy !deploy SYMBOL` in a tweet.
+audience: launcher
+---
+
+The X (Twitter) trigger deploys the same on-chain shape as the [site launch](/getting-started/first-launch-site) (a plain 1B-supply ERC-20 with a Uniswap V4 pool whose launch-wall LP is burned to the dead address), except the trigger is a tweet mention instead of a wallet signature.
+
+A plain `!deploy` has no gas cost to the launcher. The launch is broadcast on your behalf, and the addresses come back as a reply to your tweet.
+
+<Note>
+To buy a share of your own coin's supply in the launch transaction, append the [`and buy` suffix](/launch/dev-buy#dev-buys-from-reddit-and-x), which spends from a wallet you link once at [archr.win/signup](https://archr.win/signup), or use the [site flow](/getting-started/first-launch-site).
+</Note>
+
+## Command shape
+
+Post a tweet that mentions the bot and contains a `!deploy` command:
+
+```
+@archrdeploy !deploy SYMBOL
+@archrdeploy !deploy SYMBOL name goes here
+@archrdeploy !deploy SYMBOL name goes here and buy 0.05e
+```
+
+- `SYMBOL` is the ticker: short, alphanumeric, uppercase by convention.
+- `name` is optional; when omitted the coin's name defaults to the symbol.
+- `and buy 0.05e` optionally adds a [dev-buy](/launch/dev-buy#dev-buys-from-reddit-and-x) paid from your linked wallet: an ETH amount with an `e` suffix, up to four decimals.
+- The command is case-sensitive on `!deploy`.
+- Only the first `!deploy` in a tweet counts. One coin per tweet; two tweets in a row each launch their own coin.
+
+## What the bot does
+
+1. Reads new mentions on X.
+2. Sanitizes the name and symbol per the rules on [launch → name and symbol rules](/launch/overview#name-and-symbol-rules).
+3. Prices the launch tick from the live Chainlink ETH/USD feed on Robinhood Chain (fail-closed if the feed has aged out).
+4. Calls the launch factory (see [Contracts](/network/contracts)), which atomically deploys the ERC-20, creates the V4 pool, places 95% of the supply into it as a single-sided sell wall with the launch-wall LP burned to the dead address, and escrows the other 5% for [holder rewards](/earn/holder-rewards).
+5. Replies to your tweet with the coin address, pool address, and Blockscout link.
+
+## Dedupe
+
+Each tweet can trigger at most one launch. The launch factory enforces this on-chain: a duplicate `!deploy` on a tweet that already produced a coin reverts `AlreadyLaunched`.
+
+## When a launch is rejected
+
+The platform does not reply when a command cannot be launched. Common reasons a `!deploy` will not produce a coin:
+
+- The command failed to parse.
+- The bot cannot see the tweet (private account, mention was to a different handle, etc.).
+- The platform is paused for maintenance.
+
+If your tweet parses cleanly and the bot goes silent, check [@archrdeploy](https://x.com/archrdeploy); maintenance windows are posted there.
+
+## After the reply
+
+The bot's reply includes the coin's Blockscout URL. Open it and verify the same three properties as any launch:
+
+- The token has a fixed supply of 1,000,000,000e18.
+- The V4 pool exists at LP fee 0 (tickSpacing 200) and holds 95% of the supply as single-sided liquidity; the other 5% sits in the on-chain [holder rewards](/earn/holder-rewards) escrow.
+- The launch-wall LP position is owned by the burn address `0x…dEaD`; the liquidity can never be moved by anyone.
+
+Trade on the swap widget at [archr.win/token/&lt;address&gt;](https://archr.win) or any Uniswap V4 aggregator on 4663. See [trading overview](/trade/overview#where-to-swap).
+
+## Claim your creator fees
+
+A launch from X starts with no recorded creator, because an X account is not a wallet. To record one, reply in the same reply chain (under your `!deploy` tweet), from the same X account:
+
+```
+!claim 0xYourWalletAddress
+```
+
+The platform matches the claim to your `!deploy` and records that address as the coin's creator on-chain. The write is one-shot (a set creator can never be changed) and public, so it ties your X account to that wallet; check the address before you post. Until you claim, the skimmed ETH simply accrues in the coin's vault and never expires. See [creator fees](/launch/creator-fees) for how collection works.
